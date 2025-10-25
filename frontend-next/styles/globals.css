@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --mh-bg: #F7F5F2;
+  --mh-foreground: #222226;
+  --mh-accent: #C49A6C;
+  --mh-muted: #8F8A85;
+}
+
+html,body,#__next{
+  height:100%;
+}
+
+body{
+  @apply bg-mhbg text-mhcharcoal;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.font-display{
+  font-family: 'Playfair Display', serif;
+}
+
+/* small, tasteful border and shadow for cards */
+.border {
+  border-color: rgba(34,34,38,0.06);
+}
