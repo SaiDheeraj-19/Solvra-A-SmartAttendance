@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import LoadingScreen from "@/components/LoadingScreen";
-import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Solvra - Precision Attendance & Marks Tracking",
@@ -14,17 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body className="antialiased font-sans bg-primary-bg">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <LoadingScreen />
-          {children}
-        </ThemeProvider>
+        <LoadingScreen />
+        {children}
       </body>
     </html>
   );

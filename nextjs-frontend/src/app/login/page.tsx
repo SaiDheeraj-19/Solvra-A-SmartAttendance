@@ -1,39 +1,87 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, UserPlus, LogIn, Home } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, UserPlus, LogIn, Home, User, IdCard } from 'lucide-react';
 import { authAPI, setAuthToken, getUserDashboardPath } from '@/services/api';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [formData, setFormData] = useState({ 
     email: '', 
     password: '',
+    confirmPassword: '',
     name: '',
     studentId: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const router = useRouter();
+
+  // Clear messages when switching modes
+  useEffect(() => {
+    setError('');
+    setSuccess('');
+  }, [isRegistering]);
+
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setError('Email and password are required');
+      return false;
+    }
+
+    if (isRegistering) {
+      if (!formData.name || !formData.studentId) {
+        setError('All fields are required');
+        return false;
+      }
+
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        return false;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError('Please enter a valid email address');
+        return false;
+      }
+
+      // Student ID validation (alphanumeric, 6-12 characters)
+      const studentIdRegex = /^[a-zA-Z0-9]{6,12}$/;
+      if (!studentIdRegex.test(formData.studentId)) {
+        setError('Student ID must be 6-12 alphanumeric characters');
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
+
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
     
     try {
       if (isRegistering) {
-        // Validate required fields for registration
-        if (!formData.name || !formData.email || !formData.password || !formData.studentId) {
-          throw new Error('All fields are required');
-        }
-        
-        // Confirm password validation would go here
-        
         const response = await authAPI.registerStudent({
           name: formData.name,
           email: formData.email,
@@ -42,30 +90,53 @@ export default function LoginPage() {
         });
         
         setAuthToken(response.token);
-        router.push('/student');
-      } else {
-        // Login
-        if (!formData.email || !formData.password) {
-          throw new Error('Email and password are required');
-        }
+        setSuccess('Account created successfully! Redirecting...');
         
+        // Small delay to show success message
+        setTimeout(() => {
+          router.push('/student');
+        }, 1500);
+      } else {
         const response = await authAPI.login(formData.email, formData.password);
         
         setAuthToken(response.token);
+        setSuccess('Login successful! Redirecting...');
         
         // Get user profile to determine role and redirect appropriately
         try {
           const profile = await authAPI.getProfile();
           const dashboardPath = getUserDashboardPath(profile.role);
-          router.push(dashboardPath);
-        } catch (_profileError) {
-          // Fallback to student dashboard if profile fetch fails
-          router.push('/student');
+          
+          // Small delay to show success message
+          setTimeout(() => {
+            router.push(dashboardPath);
+          }, 1500);
+        } catch (profileError) {
+          console.log('Profile fetch failed, using fallback:', profileError);
+          // Small delay to show success message
+          setTimeout(() => {
+            router.push('/student');
+          }, 1500);
         }
       }
     } catch (err: unknown) {
       console.error('Auth error:', err);
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      // Provide more specific error messages
+      if (err instanceof Error) {
+        if (err.message.includes('Network error')) {
+          setError('Unable to connect to the server. Please check your internet connection and try again.');
+        } else if (err.message.includes('401') || err.message.includes('Invalid credentials')) {
+          setError('Invalid email or password. Please try again.');
+        } else if (err.message.includes('already exists')) {
+          setError('An account with this email or student ID already exists. Please use a different email or student ID.');
+        } else if (err.message.includes('rate limit')) {
+          setError('Too many attempts. Please try again later.');
+        } else {
+          setError(err.message || 'Authentication failed. Please try again.');
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -74,17 +145,19 @@ export default function LoginPage() {
   const toggleMode = () => {
     setIsRegistering(!isRegistering);
     setError('');
+    setSuccess('');
     // Reset form when toggling modes
     setFormData({ 
       email: '', 
       password: '',
+      confirmPassword: '',
       name: '',
       studentId: ''
     });
   };
 
   return (
-    <main className="min-h-screen bg-primary-bg relative overflow-hidden flex items-center justify-center px-6">
+    <main className="min-h-screen bg-primary-bg relative overflow-hidden flex items-center justify-center px-4 py-8 sm:px-6">
       <div className="absolute inset-0 grid-background opacity-5" />
       <div className="absolute inset-0 spotlight" />
 
@@ -105,24 +178,40 @@ export default function LoginPage() {
             </div>
           </Link>
           <p className="text-text-primary mt-4">
-            {isRegistering ? 'Create your account' : 'Sign in to your account'}
+            {isRegistering ? 'Create your student account' : 'Sign in to your account'}
           </p>
         </div>
 
-        <div className="premium-card p-8 rounded-3xl">
+        <div className="premium-card p-6 sm:p-8 rounded-2xl sm:rounded-3xl">
+          {/* Error Message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm"
+            >
               {error}
-            </div>
+            </motion.div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm"
+            >
+              {success}
+            </motion.div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {isRegistering && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">Full Name</label>
                   <div className="relative">
-                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
                     <input
                       type="text"
                       value={formData.name}
@@ -130,6 +219,7 @@ export default function LoginPage() {
                       className="w-full premium-input rounded-xl pl-12 pr-4 py-3 placeholder-text-secondary focus:outline-none focus:border-accent-bronze transition-colors"
                       placeholder="Enter your full name"
                       required={isRegistering}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -137,7 +227,7 @@ export default function LoginPage() {
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">Student ID</label>
                   <div className="relative">
-                    <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
+                    <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
                     <input
                       type="text"
                       value={formData.studentId}
@@ -145,6 +235,7 @@ export default function LoginPage() {
                       className="w-full premium-input rounded-xl pl-12 pr-4 py-3 placeholder-text-secondary focus:outline-none focus:border-accent-bronze transition-colors"
                       placeholder="Enter your student ID"
                       required={isRegistering}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -162,6 +253,7 @@ export default function LoginPage() {
                   className="w-full premium-input rounded-xl pl-12 pr-4 py-3 placeholder-text-secondary focus:outline-none focus:border-accent-bronze transition-colors"
                   placeholder="Enter your email"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -177,15 +269,21 @@ export default function LoginPage() {
                   className="w-full premium-input rounded-xl pl-12 pr-12 py-3 placeholder-text-secondary focus:outline-none focus:border-accent-bronze transition-colors"
                   placeholder="Enter your password"
                   required
+                  disabled={loading}
+                  minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-bronze hover:text-text-primary"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {isRegistering && (
+                <p className="mt-1 text-xs text-text-secondary">Minimum 6 characters</p>
+              )}
             </div>
 
             {isRegistering && (
@@ -194,25 +292,29 @@ export default function LoginPage() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     className="w-full premium-input rounded-xl pl-12 pr-12 py-3 placeholder-text-secondary focus:outline-none focus:border-accent-bronze transition-colors"
                     placeholder="Confirm your password"
                     required={isRegistering}
+                    disabled={loading}
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-bronze hover:text-text-primary"
+                    disabled={loading}
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
             )}
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
               type="submit"
               disabled={loading}
               className="w-full premium-button primary py-3 rounded-xl font-semibold flex items-center justify-center gap-2 group disabled:opacity-70"
@@ -237,10 +339,11 @@ export default function LoginPage() {
             </motion.button>
           </form>
 
-          <div className="flex items-center justify-between mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
             <button
               onClick={toggleMode}
-              className="text-bronze hover:text-text-primary font-medium flex items-center gap-2"
+              disabled={loading}
+              className="text-bronze hover:text-text-primary font-medium flex items-center gap-2 disabled:opacity-50"
             >
               {isRegistering ? (
                 <>
@@ -255,7 +358,10 @@ export default function LoginPage() {
               )}
             </button>
             
-            <Link href="/" className="text-bronze hover:text-text-primary font-medium flex items-center gap-2">
+            <Link 
+              href="/" 
+              className="text-bronze hover:text-text-primary font-medium flex items-center gap-2"
+            >
               <Home className="w-4 h-4" />
               Home
             </Link>

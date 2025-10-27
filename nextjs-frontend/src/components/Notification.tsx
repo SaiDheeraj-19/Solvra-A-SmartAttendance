@@ -75,7 +75,7 @@ export default function Notification({
         initial={{ opacity: 0, y: -20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.95 }}
-        className={`fixed top-4 right-4 z-50 premium-card p-4 rounded-xl border shadow-lg max-w-md ${getBackgroundColor()}`}
+        className={`fixed top-4 right-4 z-[100] premium-card p-4 rounded-xl border shadow-lg max-w-md ${getBackgroundColor()}`}
       >
         <div className="flex items-start gap-3">
           {getIcon()}

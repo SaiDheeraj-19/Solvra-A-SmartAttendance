@@ -22,6 +22,7 @@ export default function FaceCamera({
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [mirrored, setMirrored] = useState(true); // Default to mirrored view
 
   // Check for camera permissions and availability
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function FaceCamera({
               ref={webcamRef}
               screenshotFormat="image/jpeg"
               videoConstraints={videoConstraints}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${mirrored ? 'scale-x-[-1]' : ''}`}
               onUserMediaError={(error) => {
                 console.error('Webcam error:', error);
                 setCameraError("Failed to access camera. Please check permissions and try again.");
@@ -124,6 +125,15 @@ export default function FaceCamera({
           )}
           
           <div className="mt-4 flex flex-col items-center">
+            <div className="flex gap-4 mb-4">
+              <button
+                onClick={() => setMirrored(!mirrored)}
+                className="premium-button px-4 py-2 rounded-full text-label"
+              >
+                {mirrored ? 'Normal View' : 'Mirror View'}
+              </button>
+            </div>
+            
             <button
               onClick={captureImage}
               disabled={capturing || !!cameraError}

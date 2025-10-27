@@ -20,16 +20,6 @@
   --shadow-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Dark mode variables */
-.dark {
-  --bg-primary: #1a1a1a;
-  --text-primary: #f0f0f0;
-  --text-secondary: #aaaaaa;
-  --card-bg: rgba(30, 30, 30, 0.8);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --shadow-color: rgba(0, 0, 0, 0.3);
-}
-
 html {
   /* Removed smooth scroll to improve cursor performance */
 }
@@ -121,6 +111,19 @@ body {
   transform: translateY(-2px);
 }
 
+/* Ensure buttons have proper text visibility */
+button, .premium-button {
+  color: var(--text-primary);
+}
+
+button:hover, .premium-button:hover {
+  color: var(--text-primary);
+}
+
+.premium-button.primary {
+  color: white;
+}
+
 /* Premium Input */
 .premium-input {
   background: var(--card-bg);
@@ -140,8 +143,54 @@ body {
   color: rgba(27, 27, 27, 0.5);
 }
 
-.dark .premium-input::placeholder {
-  color: rgba(240, 240, 240, 0.5);
+/* Ensure input text is clearly visible */
+input, textarea, select {
+  color: var(--text-primary);
+}
+
+input::placeholder, textarea::placeholder, select::placeholder {
+  color: var(--text-secondary);
+}
+
+input:focus, textarea:focus, select:focus {
+  color: var(--text-primary);
+}
+
+/* Ensure all text elements have proper contrast */
+body, p, h1, h2, h3, h4, h5, h6, span, div, button, input, textarea, select, label {
+  color: var(--text-primary);
+}
+
+/* Ensure links are visible */
+a {
+  color: var(--accent-bronze);
+}
+
+a:hover {
+  color: #a88d63;
+}
+
+/* Ensure placeholder text is visible */
+::placeholder {
+  color: var(--text-secondary);
+  opacity: 1; /* Firefox */
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: var(--text-secondary);
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+  color: var(--text-secondary);
+}
+
+/* Text color classes for proper dark mode support */
+.text-text-primary {
+  color: var(--text-primary);
+}
+
+.text-text-secondary {
+  color: var(--text-secondary);
 }
 
 /* Bronze Text */
@@ -371,26 +420,3 @@ body {
   color: #003366;
 }
 
-.dark .notification.success {
-  background: rgba(30, 50, 30, 0.9);
-  border-color: rgba(0, 180, 0, 0.3);
-  color: #66cc66;
-}
-
-.dark .notification.error {
-  background: rgba(50, 30, 30, 0.9);
-  border-color: rgba(180, 0, 0, 0.3);
-  color: #cc6666;
-}
-
-.dark .notification.warning {
-  background: rgba(50, 50, 30, 0.9);
-  border-color: rgba(180, 180, 0, 0.3);
-  color: #cccc66;
-}
-
-.dark .notification.info {
-  background: rgba(30, 40, 50, 0.9);
-  border-color: rgba(0, 100, 180, 0.3);
-  color: #6699cc;
-}

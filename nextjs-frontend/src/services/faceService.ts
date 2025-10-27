@@ -70,5 +70,34 @@ export const faceService = {
       console.error('Get face status error:', error);
       throw error;
     }
+  },
+
+  // Update security settings
+  updateSecuritySettings: async (securitySettings: { 
+    requireFaceVerification?: boolean; 
+    allowProxyAttendance?: boolean;
+    maxVerificationAttempts?: number;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/face/security-settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(securitySettings),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update security settings');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Update security settings error:', error);
+      throw error;
+    }
   }
 };

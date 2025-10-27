@@ -91,7 +91,7 @@ app.use(morgan('combined', { stream: accessLogStream })); // HTTP request logger
 app.use(helmet()); // Secure HTTP headers
 app.use(compression()); // Compress responses
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3010'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3010'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' })); // Limit payload size
@@ -111,7 +111,7 @@ const standardLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // Limit each IP to 20 login/register attempts per hour
+  max: 100, // Increased limit for development
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many authentication attempts from this IP, please try again after an hour'
@@ -135,7 +135,7 @@ const io = new Server(server, {
   cors: { 
     origin: process.env.NODE_ENV === 'production' 
       ? process.env.FRONTEND_URL 
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3010'],
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3010'],
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -198,7 +198,12 @@ io.on('connection', (socket) => {
 });
 
 // Routes - Apply rate limiting to all API routes
-app.use('/api/auth', authLimiter, authRoutes);
+// For development, we can bypass rate limiting to avoid issues during testing
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api/auth', authRoutes);
+} else {
+  app.use('/api/auth', authLimiter, authRoutes);
+}
 app.use('/api/attendance', standardLimiter, attendanceRoutes);
 app.use('/api/qr', standardLimiter, qrRoutes);
 app.use('/api/face', standardLimiter, faceRoutes);

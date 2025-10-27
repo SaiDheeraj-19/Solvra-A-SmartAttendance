@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, BarChart3, User, Calendar, Clock, Award, MapPin, Camera, CheckCircle, AlertCircle, LogOut, Settings, History, Scan, X, Edit3, Lock, Bell, Palette, Sun, Moon } from 'lucide-react';
+import { QrCode, BarChart3, User, Calendar, Clock, Award, MapPin, Camera, CheckCircle, AlertCircle, LogOut, Settings, History, Scan, Edit3, Lock, Bell, Palette, Sun, Moon } from 'lucide-react';
 import FaceCamera from '@/components/FaceCamera';
 import AutoQRScanner from '@/components/AutoQRScanner';
 import { faceService } from '@/services/faceService';
@@ -22,7 +22,7 @@ export default function EnhancedStudentDashboard() {
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [faceVerificationError, setFaceVerificationError] = useState<string | null>(null);
   const [faceVerificationLoading, setFaceVerificationLoading] = useState(false);
-  const [profileData, setProfileData] = useState({
+  const [profileData] = useState({
     name: 'John Doe',
     email: 'john.doe@student.edu',
     studentId: 'STU2024001',
@@ -120,7 +120,6 @@ export default function EnhancedStudentDashboard() {
         // Clear the manual timeout
         clearTimeout(timeoutId);
         
-        console.error('Geolocation error:', error);
         setLocationStatus('failed');
         
         // Provide detailed error messages based on error code
@@ -128,15 +127,25 @@ export default function EnhancedStudentDashboard() {
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = 'Location access denied. Please enable location permissions in your browser settings and try again.';
+            // Only log if it's not a user cancellation (user might have denied permission)
+            if (error.message && !error.message.includes('User denied')) {
+              console.error('Geolocation permission denied:', error);
+            }
             break;
           case error.POSITION_UNAVAILABLE:
             errorMessage = 'Location information unavailable. Please ensure your device location is turned on and try again.';
+            console.error('Geolocation position unavailable:', error);
             break;
           case error.TIMEOUT:
             errorMessage = 'Location request timed out. Please check your internet connection and try again.';
+            console.error('Geolocation timeout:', error);
             break;
           default:
             errorMessage = `Unable to retrieve location: ${error.message || 'Unknown error'}. Please try again.`;
+            // Only log if it's not a user cancellation
+            if (error.message && !error.message.includes('User denied') && !error.message.includes('cancelled')) {
+              console.error('Geolocation error:', error);
+            }
             break;
         }
         
@@ -188,11 +197,26 @@ export default function EnhancedStudentDashboard() {
     }
   };
 
+  // Mock attendance stats for demonstration
+  const attendanceStats = {
+    present: 0,
+    absent: 0,
+    total: 0
+  };
+
+  const totalClasses = attendanceStats.present + attendanceStats.absent;
+  const attendancePercentage = totalClasses > 0 ? Math.round((attendanceStats.present / totalClasses) * 1000) / 10 : 0;
+  const perfectWeeks = Math.floor(attendanceStats.present / 5); // Assuming 5 classes per week
+  // Show "nil" for new users with no attendance records, otherwise calculate on-time rate
+  const onTimeRate = totalClasses === 0 ? 'nil' : 
+                    attendancePercentage > 90 ? '96%' : 
+                    `${Math.max(80, attendancePercentage - 5)}%`;
+
   const stats = [
-    { label: 'Weekly Attendance', value: '93.5%', icon: BarChart3, change: '+2.3%' },
-    { label: 'Classes Attended', value: '42/45', icon: Calendar, change: '+3' },
-    { label: 'Perfect Weeks', value: '8', icon: Award, change: '+1' },
-    { label: 'On-Time Rate', value: '96%', icon: Clock, change: '+1.5%' },
+    { label: 'Weekly Attendance', value: `${attendancePercentage}%`, icon: BarChart3, change: totalClasses > 0 ? `+${Math.round((attendanceStats.present / totalClasses) * 100 - 90)}%` : '+0%' },
+    { label: 'Classes Attended', value: `${attendanceStats.present}/${totalClasses}`, icon: Calendar, change: `+${attendanceStats.present}` },
+    { label: 'Perfect Weeks', value: `${perfectWeeks}`, icon: Award, change: `+${perfectWeeks}` },
+    { label: 'On-Time Rate', value: onTimeRate, icon: Clock, change: totalClasses > 0 ? onTimeRate : 'No data' },
   ];
 
   const recentSessions = [

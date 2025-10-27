@@ -195,6 +195,249 @@ exports.checkOut = async (req, res) => {
   }
 };
 
+// Proxy attendance functions
+exports.proxyCheckIn = async (req, res) => {
+  const { targetUserId, lat, lng, accuracy, reason } = req.body || {};
+  
+  if (!targetUserId) {
+    return res.status(400).json({ 
+      success: false,
+      error: {
+        message: 'Target user ID is required for proxy attendance',
+        code: 'TARGET_USER_REQUIRED'
+      }
+    });
+  }
+  
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ 
+      success: false,
+      error: {
+        message: 'Location coordinates required',
+        code: 'LOCATION_REQUIRED'
+      }
+    });
+  }
+  
+  try {
+    // Check if the requesting user is authorized to mark proxy attendance
+    const requestingUser = await User.findById(req.user._id);
+    if (!requestingUser) {
+      return res.status(404).json({ 
+        success: false,
+        error: {
+          message: 'Requesting user not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Only faculty, HOD, and Dean can mark proxy attendance
+    if (!['faculty', 'hod', 'dean'].includes(requestingUser.role)) {
+      return res.status(403).json({ 
+        success: false,
+        error: {
+          message: 'Only authorized personnel can mark proxy attendance',
+          code: 'UNAUTHORIZED_PROXY'
+        }
+      });
+    }
+    
+    // Check if the target user exists
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ 
+        success: false,
+        error: {
+          message: 'Target user not found',
+          code: 'TARGET_USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    // Check if the target user has enabled proxy attendance
+    if (!targetUser.securitySettings || !targetUser.securitySettings.allowProxyAttendance) {
+      return res.status(403).json({ 
+        success: false,
+        error: {
+          message: 'Target user has not enabled proxy attendance',
+          code: 'PROXY_NOT_ALLOWED'
+        }
+      });
+    }
+    
+    // Convert string coordinates to numbers if needed
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ 
+        success: false,
+        error: {
+          message: 'Invalid location coordinates',
+          code: 'INVALID_LOCATION'
+        }
+      });
+    }
+    
+    // Check if the proxy user is inside campus
+    if (!isInsideCampus({ lat: latitude, lng: longitude })) {
+      return res.status(403).json({ 
+        success: false,
+        error: {
+          message: 'Proxy user is not inside the campus boundary',
+          code: 'PROXY_OUTSIDE_CAMPUS'
+        }
+      });
+    }
+    
+    // Initialize notification service if not already initialized
+    if (!notificationService) {
+      const io = req.app.get('io');
+      notificationService = new NotificationService(io);
+    }
+    
+    const date = startOfDayUTC();
+    const now = new Date();
+    
+    const className = targetUser.department || 'Unknown Department';
+    
+    const update = {
+      $setOnInsert: { user: targetUserId, date },
+      $set: { 
+        status: 'present', 
+        checkInAt: now,
+        lastUpdated: now,
+        'proxy.isProxy': true,
+        'proxy.proxyUser': req.user._id,
+        'proxy.reason': reason,
+        'proxy.approved': true // Auto-approve for authorized personnel
+      },
+      $push: { 
+        events: { 
+          type: 'enter', 
+          location: { lat, lng, accuracy },
+          timestamp: now
+        } 
+      }
+    };
+    
+    const record = await Attendance.findOneAndUpdate(
+      { user: targetUserId, date },
+      update,
+      { upsert: true, new: true }
+    );
+    
+    // Send real-time notification
+    await notificationService.sendAttendanceUpdate(
+      targetUserId,
+      record._id.toString(),
+      'present',
+      'Daily Attendance (Proxy)'
+    );
+    
+    // Emit real-time update to faculty dashboard
+    const io = req.app.get('io');
+    io.to('faculty').emit('attendance-update', {
+      userId: targetUserId,
+      userName: targetUser.name || 'Unknown User',
+      className,
+      status: 'present',
+      timestamp: now,
+      proxy: true,
+      proxyUserName: requestingUser.name
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: record,
+      message: 'Proxy check-in successful'
+    });
+  } catch (error) {
+    console.error('Proxy check-in error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: {
+        message: 'Error during proxy check-in',
+        code: 'PROXY_CHECK_IN_ERROR'
+      }
+    });
+  }
+};
+
+exports.getProxyAttendanceHistory = async (req, res) => {
+  try {
+    // Only faculty, HOD, and Dean can view proxy attendance history
+    const user = await User.findById(req.user._id);
+    if (!['faculty', 'hod', 'dean'].includes(user.role)) {
+      return res.status(403).json({ 
+        success: false,
+        error: {
+          message: 'Only authorized personnel can view proxy attendance history',
+          code: 'UNAUTHORIZED_VIEW_PROXY'
+        }
+      });
+    }
+    
+    const records = await Attendance.find({ 'proxy.isProxy': true })
+      .populate('user', 'name email studentId department')
+      .populate('proxy.proxyUser', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(100); // Limit to last 100 proxy records
+    
+    res.status(200).json({
+      success: true,
+      data: records
+    });
+  } catch (error) {
+    console.error('Error fetching proxy attendance history:', error);
+    res.status(500).json({ 
+      success: false,
+      error: {
+        message: 'Error fetching proxy attendance history',
+        code: 'PROXY_HISTORY_ERROR'
+      }
+    });
+  }
+};
+
+exports.toggleProxyAttendancePermission = async (req, res) => {
+  try {
+    const { allowProxyAttendance } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { 'securitySettings.allowProxyAttendance': allowProxyAttendance },
+      { new: true }
+    ).select('securitySettings.allowProxyAttendance');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        }
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: user.securitySettings,
+      message: `Proxy attendance ${allowProxyAttendance ? 'enabled' : 'disabled'} successfully`
+    });
+  } catch (error) {
+    console.error('Error toggling proxy attendance permission:', error);
+    res.status(500).json({ 
+      success: false,
+      error: {
+        message: 'Error updating proxy attendance permission',
+        code: 'PROXY_PERMISSION_ERROR'
+      }
+    });
+  }
+};
+
 exports.getAttendance = async (req, res) => {
   try {
     const records = await Attendance.find({ user: req.user._id }).sort({ date: -1 });

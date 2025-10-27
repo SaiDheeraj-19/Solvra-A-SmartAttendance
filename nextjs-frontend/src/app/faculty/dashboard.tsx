@@ -17,7 +17,7 @@ export default function EnhancedFacultyDashboard() {
   const [cameraActive, setCameraActive] = useState(false);
   const [faceRegistrationSuccess, setFaceRegistrationSuccess] = useState(false);
   const [faceRegistrationError, setFaceRegistrationError] = useState<string | null>(null);
-  const [faceRegistrationLoading, setFaceRegistrationLoading] = useState(false);
+  // Note: faceRegistrationLoading removed as it's not used in this component
 
   // Campus location: Latitude: 15.775002 | Longitude: 78.057125
   const campusLocation = {
@@ -60,7 +60,6 @@ export default function EnhancedFacultyDashboard() {
 
   // Register face with backend API
   const registerFaceWithBackend = async (imageData: string) => {
-    setFaceRegistrationLoading(true);
     setFaceRegistrationError(null);
     
     try {
@@ -76,8 +75,6 @@ export default function EnhancedFacultyDashboard() {
       console.error('Face registration error:', error);
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during face registration. Please try again.';
       setFaceRegistrationError(errorMessage);
-    } finally {
-      setFaceRegistrationLoading(false);
     }
   };
 

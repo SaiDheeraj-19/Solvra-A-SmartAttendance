@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { X, AlertCircle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,7 +24,7 @@ export default function AutoQRScanner({
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Handle successful scan
-  const handleScan = (detectedCodes: any[]) => {
+  const handleScan = (detectedCodes: Array<{rawValue: string}>) => {
     if (detectedCodes.length > 0 && scanning) {
       const result = detectedCodes[0].rawValue;
       setScanning(false);
@@ -34,11 +34,12 @@ export default function AutoQRScanner({
   };
 
   // Handle scan errors
-  const handleError = (err: any) => {
+  const handleError = (err: unknown) => {
     console.error('QR Scanner error:', err);
-    if (err.name === 'NotAllowedError') {
+    const error = err as Error;
+    if (error.name === 'NotAllowedError') {
       setCameraError("Camera access denied. Please enable camera permissions.");
-    } else if (err.name === 'NotFoundError') {
+    } else if (error.name === 'NotFoundError') {
       setCameraError("No camera found on this device.");
     } else {
       setCameraError("Failed to access camera. Please try again.");
