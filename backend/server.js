@@ -91,7 +91,9 @@ app.use(morgan('combined', { stream: accessLogStream })); // HTTP request logger
 app.use(helmet()); // Secure HTTP headers
 app.use(compression()); // Compress responses
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3010'],
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:3004', 'http://localhost:3010'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' })); // Limit payload size
