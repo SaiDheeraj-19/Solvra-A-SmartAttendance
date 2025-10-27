@@ -25,7 +25,7 @@ exports.protect = async (req, res, next) => {
 
 // Admin only middleware
 exports.adminOnly = (req, res, next) => {
-  if (!req.user || !['admin', 'hod', 'dean'].includes(req.user.role)) {
+  if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ msg: 'Not authorized, admin access required' });
   }
   next();
@@ -33,7 +33,7 @@ exports.adminOnly = (req, res, next) => {
 
 // Faculty only middleware
 exports.facultyOnly = (req, res, next) => {
-  if (!req.user || !['faculty', 'hod', 'dean'].includes(req.user.role)) {
+  if (!req.user || !['faculty', 'admin'].includes(req.user.role)) {
     return res.status(403).json({ msg: 'Not authorized, faculty access required' });
   }
   next();

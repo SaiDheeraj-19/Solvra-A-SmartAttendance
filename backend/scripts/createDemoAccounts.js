@@ -63,7 +63,7 @@ const demoAccounts = [
     name: 'Dr. Robert Wilson',
     email: 'hod@demo.com',
     password: 'hod123',
-    role: 'hod',
+    role: 'admin',
     studentId: 'HOD001',
     department: 'Computer Science',
     phone: '+1234567895'
@@ -72,7 +72,7 @@ const demoAccounts = [
     name: 'Dr. Jennifer Davis',
     email: 'hod2@demo.com',
     password: 'hod123',
-    role: 'hod',
+    role: 'admin',
     studentId: 'HOD002',
     department: 'Information Technology',
     phone: '+1234567896'
@@ -83,7 +83,7 @@ const demoAccounts = [
     name: 'Dr. William Anderson',
     email: 'dean@demo.com',
     password: 'dean123',
-    role: 'dean',
+    role: 'admin',
     studentId: 'DEAN001',
     department: 'Engineering',
     phone: '+1234567897'
@@ -92,7 +92,7 @@ const demoAccounts = [
     name: 'Dr. Patricia Taylor',
     email: 'dean2@demo.com',
     password: 'dean123',
-    role: 'dean',
+    role: 'admin',
     studentId: 'DEAN002',
     department: 'Sciences',
     phone: '+1234567898'
@@ -126,7 +126,7 @@ async function createDemoAccounts() {
         await User.create({
           name: account.name,
           email: account.email,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           role: account.role,
           studentId: account.studentId,
           department: account.department,

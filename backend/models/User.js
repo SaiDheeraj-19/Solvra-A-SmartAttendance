@@ -9,6 +9,10 @@ const userSchema = new mongoose.Schema({
   department: String,
   subjects: [{ type: mongoose.Schema.Types.ObjectId }], // Array of class IDs
   faceRegistered: { type: Boolean, default: false },
+  securitySettings: {
+    allowProxyAttendance: { type: Boolean, default: false },
+    requireFaceVerification: { type: Boolean, default: true }
+  },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

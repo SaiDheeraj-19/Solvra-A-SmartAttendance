@@ -125,10 +125,24 @@ export default function ProxyAttendance() {
       setReason('');
     } catch (error: any) {
       console.error('Error marking proxy attendance:', error);
-      setNotification({
-        message: error.message || 'Failed to mark attendance. Please try again.',
-        type: 'error'
-      });
+      
+      // Handle specific error cases
+      if (error.message && error.message.includes('403')) {
+        setNotification({
+          message: 'Access denied. You may not have permission to mark proxy attendance, or the student has not enabled this feature.',
+          type: 'error'
+        });
+      } else if (error.message && error.message.includes('404')) {
+        setNotification({
+          message: 'Student not found. Please try again or select a different student.',
+          type: 'error'
+        });
+      } else {
+        setNotification({
+          message: error.message || 'Failed to mark attendance. Please try again.',
+          type: 'error'
+        });
+      }
     } finally {
       setLoading(false);
     }

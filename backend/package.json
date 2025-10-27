@@ -8,7 +8,9 @@
     "dev": "nodemon server.js",
     "seed:demo": "node scripts/createDemoAccounts.js",
     "remove:demo": "node scripts/removeDemoAccounts.js",
-    "seed:data": "node scripts/seedData.js"
+    "seed:data": "node scripts/seedData.js",
+    "update:admin-roles": "node scripts/updateAdminRoles.js",
+    "check:accounts": "node scripts/checkAccounts.js"
   },
   "keywords": [],
   "author": "",

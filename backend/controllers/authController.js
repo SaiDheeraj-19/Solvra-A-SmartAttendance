@@ -30,7 +30,7 @@ exports.register = async (req, res) => {
     user = await User.create({
       name,
       email,
-      password: hashed,
+      passwordHash: hashed,
       studentId: studentId || employeeId, // Use studentId field for both student and employee IDs
       department,
       year,
@@ -68,7 +68,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
 
-    const match = await bcrypt.compare(password, user.password);
+    const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) return res.status(400).json({ msg: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -163,7 +163,7 @@ exports.changePassword = async (req, res) => {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({ msg: 'Current password is incorrect' });
     }
@@ -172,7 +172,7 @@ exports.changePassword = async (req, res) => {
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password
-    await User.findByIdAndUpdate(req.user._id, { password: hashedNewPassword });
+    await User.findByIdAndUpdate(req.user._id, { passwordHash: hashedNewPassword });
 
     res.json({ msg: 'Password changed successfully' });
   } catch (err) {
@@ -184,7 +184,7 @@ exports.changePassword = async (req, res) => {
 // Get all faculty members
 exports.getFaculty = async (req, res) => {
   try {
-    const faculty = await User.find({ role: { $in: ['faculty', 'hod', 'dean'] } })
+    const faculty = await User.find({ role: { $in: ['faculty', 'admin'] } })
       .select('name email department phone isActive createdAt')
       .sort({ name: 1 });
     
@@ -200,7 +200,7 @@ exports.getAllUsers = async (req, res) => {
   try {
     // Check if user has admin privileges
     const currentUser = await User.findById(req.user._id);
-    if (!['hod', 'dean'].includes(currentUser.role)) {
+    if (currentUser.role !== 'admin') {
       return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
     }
 
@@ -209,7 +209,7 @@ exports.getAllUsers = async (req, res) => {
     // Filter by role if specified
     if (req.query.role && req.query.role !== 'all') {
       if (req.query.role === 'admin') {
-        query.role = { $in: ['hod', 'dean'] };
+        query.role = 'admin';
       } else {
         query.role = req.query.role;
       }
@@ -231,7 +231,7 @@ exports.updateUser = async (req, res) => {
   try {
     // Check if user has admin privileges
     const currentUser = await User.findById(req.user._id);
-    if (!['hod', 'dean'].includes(currentUser.role)) {
+    if (currentUser.role !== 'admin') {
       return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
     }
 
@@ -266,7 +266,7 @@ exports.updateUser = async (req, res) => {
     // Only update password if provided
     if (password && password.trim() !== '') {
       const hashed = await bcrypt.hash(password, 10);
-      updateData.password = hashed;
+      updateData.passwordHash = hashed;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -291,7 +291,7 @@ exports.deleteUser = async (req, res) => {
   try {
     // Check if user has admin privileges
     const currentUser = await User.findById(req.user._id);
-    if (!['hod', 'dean'].includes(currentUser.role)) {
+    if (currentUser.role !== 'admin') {
       return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
     }
 
