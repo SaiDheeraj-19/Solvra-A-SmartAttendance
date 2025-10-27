@@ -28,5 +28,4 @@ services:
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: "https://<your-backend>.onrender.com/api"
         sync: false
