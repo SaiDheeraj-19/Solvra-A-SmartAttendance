@@ -888,7 +888,8 @@ export default function StudentDashboard() {
 
                                 // Update profile data
                                 const updatedProfile = await authAPI.updateProfile(profileUpdateData);
-                                setProfileData(profileData);
+                                // FIX: Update the profileData state with the response from the server
+                                setProfileData(updatedProfile);
                                 setNotification({
                                   message: 'Profile saved successfully!',
                                   type: 'success'
@@ -979,7 +980,7 @@ export default function StudentDashboard() {
 
                                 // Update profile data
                                 const updatedProfile = await authAPI.updateProfile(profileUpdateData);
-                                setProfileData(editedProfileData);
+                                setProfileData(updatedProfile);
                                 setEditingProfile(false);
                                 setNotification({
                                   message: 'Profile updated successfully!',

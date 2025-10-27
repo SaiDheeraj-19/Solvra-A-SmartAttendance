@@ -781,10 +781,8 @@ export default function FacultyPortal() {
 
                                 // Update profile data
                                 const updatedProfile = await authAPI.updateProfile(profileUpdateData);
-                                setProfileData({
-                                  name: editedProfileData.name,
-                                  department: editedProfileData.department
-                                });
+                                // FIX: Update the profileData state with the full response from the server
+                                setProfileData(updatedProfile);
                                 setEditingProfile(false);
                                 setNotification({
                                   message: 'Profile updated successfully!',
