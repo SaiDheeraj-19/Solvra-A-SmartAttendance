@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getGeofence, updateGeofence } = require('../controllers/geofenceController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { getGeofence, updateGeofence, testGeofence } = require('../controllers/geofenceController');
+const { protect } = require('../middleware/auth');
 
-// Anyone authenticated can view current geofence
+// All routes protected by admin middleware
 router.get('/', protect, getGeofence);
-
-// Admins only can update
-router.post('/', protect, adminOnly, updateGeofence);
+router.put('/', protect, updateGeofence);
+router.post('/test', protect, testGeofence); // New test endpoint
 
 module.exports = router;

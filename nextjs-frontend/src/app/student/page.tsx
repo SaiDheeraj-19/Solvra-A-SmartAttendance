@@ -71,6 +71,154 @@ export default function StudentDashboard() {
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   // Note: qrWebcamRef removed as QR scanning is handled by AutoQRScanner component
 
+  // Campus location: Latitude: 15.775002 | Longitude: 78.057125
+  const campusLocation = {
+    lat: 15.775002,
+    lng: 78.057125,
+    radius: 500 // meters
+  };
+
+  // Check if user is within geofence
+  const checkGeofence = (lat: number, lng: number) => {
+    // Haversine formula to calculate distance between two points
+    const R = 6371e3; // Earth radius in meters
+    const lat1 = campusLocation.lat * Math.PI/180;
+    const lat2 = lat * Math.PI/180;
+    const deltaLat = (lat - campusLocation.lat) * Math.PI/180;
+    const deltaLng = (lng - campusLocation.lng) * Math.PI/180;
+    
+    const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+              Math.cos(lat1) * Math.cos(lat2) *
+              Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    
+    const distance = R * c;
+    
+    return distance <= campusLocation.radius;
+  };
+
+  // Get user's current location with improved error handling and timeout
+  const getLocation = () => {
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      setLocationStatus('failed');
+      setLocationError('Geolocation is not supported by your browser. Please try a different browser or device.');
+      setNotification({
+        message: 'Geolocation is not supported by your browser.',
+        type: 'error'
+      });
+      return;
+    }
+    
+    setLocationStatus('pending');
+    setLocationError(null);
+    
+    // Set a manual timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      setLocationStatus('failed');
+      setLocationError('Location request timed out. Please ensure location services are enabled and try again.');
+      setNotification({
+        message: 'Location request timed out. Please ensure location services are enabled and try again.',
+        type: 'error'
+      });
+      console.warn('Geolocation request manually timed out after 20 seconds');
+    }, 20000); // 20 seconds timeout
+    
+    // Request location with detailed error handling
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // Clear the manual timeout
+        clearTimeout(timeoutId);
+        
+        const { latitude, longitude } = position.coords;
+        setLocation({ lat: latitude, lng: longitude });
+        console.log('Location retrieved:', latitude, longitude);
+        
+        // Check if user is within campus geofence
+        if (checkGeofence(latitude, longitude)) {
+          setLocationStatus('verified');
+          setNotification({
+            message: 'Location verified successfully! You are within the campus premises.',
+            type: 'success'
+          });
+        } else {
+          setLocationStatus('failed');
+          setLocationError('You are outside the campus area. Please move closer to campus.');
+          setNotification({
+            message: 'You are outside the campus area. Attendance cannot be marked.',
+            type: 'error'
+          });
+        }
+      },
+      (error) => {
+        // Clear the manual timeout
+        clearTimeout(timeoutId);
+        
+        setLocationStatus('failed');
+        
+        // Provide detailed error messages based on error code
+        let errorMessage = '';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions in your browser settings and try again.';
+            // Only log if it's not a user cancellation (user might have denied permission)
+            if (error.message && !error.message.includes('User denied')) {
+              console.error('Geolocation permission denied:', error);
+            }
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable. Please ensure your device location is turned on and try again.';
+            console.error('Geolocation position unavailable:', error);
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please check your internet connection and try again.';
+            console.error('Geolocation timeout:', error);
+            break;
+          default:
+            errorMessage = `Unable to retrieve location: ${error.message || 'Unknown error'}. Please try again.`;
+            // Only log if it's not a user cancellation
+            if (error.message && !error.message.includes('User denied') && !error.message.includes('cancelled')) {
+              console.error('Geolocation error:', error);
+            }
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        setNotification({
+          message: errorMessage,
+          type: 'error'
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000, // Increased timeout to 15 seconds
+        maximumAge: 30000 // Reduced maximum age to 30 seconds for fresher data
+      }
+    );
+  };
+
+  // Verify face with backend API
+  const verifyFaceWithBackend = async (imageData: string) => {
+    setFaceVerificationLoading(true);
+    setFaceVerificationError(null);
+    
+    try {
+      const result = await faceService.verifyFace(imageData);
+      
+      if (result.verified) {
+        setFaceVerified(true);
+        setCameraActive(false);
+      } else {
+        setFaceVerificationError(result.message || 'Face verification failed');
+      }
+    } catch (error: unknown) {
+      console.error('Face verification error:', error);
+      setFaceVerificationError(error instanceof Error ? error.message : 'An error occurred during face verification. Please try again.');
+    } finally {
+      setFaceVerificationLoading(false);
+    }
+  };
+
   // Fetch user profile data and attendance data on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -126,211 +274,6 @@ export default function StudentDashboard() {
     fetchData();
   }, []);
 
-  // Mock function to check if user is within geofence
-  const checkGeofence = (userLat: number, userLng: number) => {
-    // Campus location: Latitude: 15.797113 | Longitude: 78.077443
-    // Radius: 500 meters
-    const campusLat = 15.797113;
-    const campusLng = 78.077443;
-    const radius = 500; // meters
-    
-    // Calculate distance using Haversine formula
-    const toRad = (value: number) => (value * Math.PI) / 180;
-    const R = 6371e3; // Earth radius in meters
-    const dLat = toRad(userLat - campusLat);
-    const dLon = toRad(userLng - campusLng);
-    const lat1 = toRad(campusLat);
-    const lat2 = toRad(userLat);
-    
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    
-    return distance <= radius;
-  };
-
-  // Get user's current location with improved error handling and timeout
-  const getLocation = () => {
-    // Check if geolocation is supported
-    if (!navigator.geolocation) {
-      setLocationStatus('failed');
-      setLocationError('Geolocation is not supported by your browser. Please try a different browser or device.');
-      setNotification({
-        message: 'Geolocation is not supported by your browser.',
-        type: 'error'
-      });
-      return;
-    }
-    
-    setLocationStatus('pending');
-    setLocationError(null);
-    
-    // Set a manual timeout to prevent hanging
-    const timeoutId = setTimeout(() => {
-      setLocationStatus('failed');
-      setLocationError('Location request timed out. Please ensure location services are enabled and try again.');
-      setNotification({
-        message: 'Location request timed out. Please ensure location services are enabled and try again.',
-        type: 'error'
-      });
-      console.warn('Geolocation request manually timed out after 20 seconds');
-    }, 20000); // 20 seconds timeout
-    
-    // Request location with detailed error handling
-    // Note: Modern browsers require user interaction to trigger geolocation prompt
-    (navigator as any).geolocation.getCurrentPosition(
-      (position: GeolocationPosition) => {
-        // Clear the manual timeout
-        clearTimeout(timeoutId);
-        
-        // Check if the request was cancelled
-        if (locationStatus === 'cancelled') {
-          return;
-        }
-        
-        const { latitude, longitude } = position.coords;
-        setLocation({ lat: latitude, lng: longitude });
-        console.log('Location retrieved:', latitude, longitude);
-        
-        // Check if user is within campus geofence
-        if (checkGeofence(latitude, longitude)) {
-          setLocationStatus('verified');
-          setNotification({
-            message: 'Location verified successfully! You are within the campus premises.',
-            type: 'success'
-          });
-        } else {
-          setLocationStatus('failed');
-          setLocationError('You are outside the campus area. Please move closer to campus.');
-          setNotification({
-            message: 'You are outside the campus area. Attendance cannot be marked.',
-            type: 'error'
-          });
-        }
-      },
-      (error: GeolocationPositionError) => {
-        // Clear the manual timeout
-        clearTimeout(timeoutId);
-        
-        // Check if the request was cancelled
-        if (locationStatus === 'cancelled') {
-          return;
-        }
-        
-        setLocationStatus('failed');
-        
-        // Provide detailed error messages based on error code
-        let errorMessage = '';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions in your browser settings and try again.';
-            // Only log if it's not a user cancellation (user might have denied permission)
-            if (error.message && !error.message.includes('User denied')) {
-              console.error('Geolocation permission denied:', error);
-            }
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable. Please ensure your device location is turned on and try again.';
-            console.error('Geolocation position unavailable:', error);
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out. Please check your internet connection and try again.';
-            console.error('Geolocation timeout:', error);
-            break;
-          default:
-            errorMessage = `Unable to retrieve location: ${error.message || 'Unknown error'}. Please try again.`;
-            // Only log if it's not a user cancellation
-            if (error.message && !error.message.includes('User denied') && !error.message.includes('cancelled')) {
-              console.error('Geolocation error:', error);
-            }
-            break;
-        }
-        
-        setLocationError(errorMessage);
-        setNotification({
-          message: errorMessage,
-          type: 'error'
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000, // Increased timeout to 15 seconds
-        maximumAge: 30000 // Reduced maximum age to 30 seconds for fresher data
-      }
-    );
-  };
-
-  // Note: QR scan function removed as it's handled by AutoQRScanner component
-
-  // Note: QR scan function removed as it's handled by AutoQRScanner component
-
-  // Verify face with backend API
-  const verifyFaceWithBackend = async (imageData: string) => {
-    setFaceVerificationLoading(true);
-    setFaceVerificationError(null);
-    
-    try {
-      const result = await faceService.verifyFace(imageData);
-      
-      if (result.verified) {
-        setFaceVerified(true);
-        setCameraActive(false);
-        setNotification({
-          message: "Face verified successfully!",
-          type: "success"
-        });
-        
-        // Automatically mark attendance after successful face verification
-        setTimeout(async () => {
-          try {
-            // Get location data for attendance
-            const locationData = {
-              lat: location?.lat || 0,
-              lng: location?.lng || 0
-            };
-            
-            // Mark attendance
-            await attendanceAPI.checkIn(locationData);
-            
-            setNotification({
-              message: "Attendance marked successfully!",
-              type: "success"
-            });
-            
-            // Refresh attendance data
-            const history = await attendanceAPI.getAttendanceHistory();
-            setAttendanceHistory(history);
-            
-            const summary = await attendanceAPI.getSummary();
-            setAttendanceStats(summary);
-          } catch (error: unknown) {
-            console.error('Attendance marking error:', error);
-            setNotification({
-              message: error instanceof Error ? error.message : "Failed to mark attendance. Please try again.",
-              type: "error"
-            });
-          }
-        }, 1500);
-      } else {
-        setNotification({
-          message: result.message || "Face verification failed. Please try again.",
-          type: "error"
-        });
-        setFaceVerificationError(result.message || 'Face verification failed');
-      }
-    } catch (error: unknown) {
-      console.error('Face verification error:', error);
-      setNotification({
-        message: error instanceof Error ? error.message : "An error occurred during face verification. Please try again.",
-        type: "error"
-      });
-      setFaceVerificationError(error instanceof Error ? error.message : 'An error occurred during face verification. Please try again.');
-    } finally {
-      setFaceVerificationLoading(false);
-    }
-  };
-
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -342,8 +285,6 @@ export default function StudentDashboard() {
       redirectToLogin();
     }
   };
-
-  // Remove the automatic location check on component mount
 
   const totalClasses = attendanceStats.present + attendanceStats.absent;
   const attendancePercentage = totalClasses > 0 ? Math.round((attendanceStats.present / totalClasses) * 1000) / 10 : 0;
@@ -364,28 +305,20 @@ export default function StudentDashboard() {
 
   return (
     <main className="min-h-screen bg-primary-bg">
-      {/* Notification */}
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-      
-      {/* Header */}
+      {/* Student Dashboard Header - Clearly identifies this as the Student Dashboard */}
       <header className="sticky top-0 z-50 bg-primary-bg/80 backdrop-blur-sm border-b border-primary">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-accent-bronze flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
+            <User className="w-8 h-8 text-accent-bronze" />
             <div>
-              <h1 className="text-subheader-md text-text-primary font-medium">{profileData.name}</h1>
-              <p className="text-body-md text-text-secondary">{profileData.studentId}</p>
+              <h1 className="text-subheader-md text-text-primary font-medium">Student Dashboard</h1>
+              <p className="text-body-md text-text-secondary">Personal Attendance Portal</p>
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <span className="text-body-md text-text-primary bg-accent-bronze/10 px-3 py-1 rounded-full">
+              {profileData.name || 'Student User'}
+            </span>
             <button 
               onClick={handleLogout}
               className="logout-button text-text-secondary hover:text-bronze transition-colors flex items-center gap-2"
@@ -890,6 +823,8 @@ export default function StudentDashboard() {
                                 const updatedProfile = await authAPI.updateProfile(profileUpdateData);
                                 // FIX: Update the profileData state with the response from the server
                                 setProfileData(updatedProfile);
+                                // Also update the editedProfileData to reflect the saved changes
+                                setEditedProfileData(updatedProfile);
                                 setNotification({
                                   message: 'Profile saved successfully!',
                                   type: 'success'

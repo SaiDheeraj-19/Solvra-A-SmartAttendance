@@ -26,6 +26,7 @@ function isInsideCampus({ lat, lng }) {
     console.error('Invalid coordinates:', { lat, lng });
     return false;
   }
+  
   // Use cached geofence from service (falls back to config if no DB entry)
   const gf = geofenceService.getGeofence();
   if (!gf || !gf.center) {
@@ -34,10 +35,10 @@ function isInsideCampus({ lat, lng }) {
   }
 
   const distance = haversineDistanceMeters({ lat, lng }, gf.center);
-  console.log(`Distance from campus center (${gf.source}): ${distance}m, Radius: ${gf.radiusMeters}m`);
-  return distance <= gf.radiusMeters;
+  const inside = distance <= gf.radiusMeters;
+  
+  console.log(`Distance from campus center (${gf.source}): ${distance.toFixed(2)}m, Radius: ${gf.radiusMeters}m, Inside: ${inside}`);
+  return inside;
 }
 
 module.exports = { haversineDistanceMeters, isInsideCampus };
-
-

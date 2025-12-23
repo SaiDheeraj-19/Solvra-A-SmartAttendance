@@ -9,21 +9,21 @@ const User = require('../models/User');
 const demoAccounts = [
   // STUDENT ACCOUNTS
   {
-    name: 'John Student',
+    name: 'Demo Student 1',
     email: 'student@demo.com',
     password: 'student123',
     role: 'student',
-    studentId: 'STU001',
+    studentId: 'DEMSTU001',
     department: 'Computer Science',
     year: '3',
     phone: '+1234567890'
   },
   {
-    name: 'Emma Student',
+    name: 'Demo Student 2',
     email: 'student2@demo.com',
     password: 'student123',
     role: 'student',
-    studentId: 'STU002',
+    studentId: 'DEMSTU002',
     department: 'Computer Science',
     year: '2',
     phone: '+1234567891'
@@ -31,7 +31,7 @@ const demoAccounts = [
   
   // FACULTY ACCOUNTS
   {
-    name: 'Dr. Sarah Johnson',
+    name: 'Demo Faculty 1',
     email: 'faculty@demo.com',
     password: 'faculty123',
     role: 'faculty',
@@ -40,7 +40,7 @@ const demoAccounts = [
     phone: '+1234567892'
   },
   {
-    name: 'Prof. Michael Brown',
+    name: 'Demo Faculty 2',
     email: 'faculty2@demo.com',
     password: 'faculty123',
     role: 'faculty',
@@ -49,7 +49,7 @@ const demoAccounts = [
     phone: '+1234567893'
   },
   {
-    name: 'Dr. Lisa Martinez',
+    name: 'Demo Faculty 3',
     email: 'faculty3@demo.com',
     password: 'faculty123',
     role: 'faculty',
@@ -60,7 +60,7 @@ const demoAccounts = [
   
   // HEAD OF DEPARTMENT (HOD) ACCOUNTS
   {
-    name: 'Dr. Robert Wilson',
+    name: 'HOD',
     email: 'hod@demo.com',
     password: 'hod123',
     role: 'admin',
@@ -69,7 +69,7 @@ const demoAccounts = [
     phone: '+1234567895'
   },
   {
-    name: 'Dr. Jennifer Davis',
+    name: 'HOD2',
     email: 'hod2@demo.com',
     password: 'hod123',
     role: 'admin',
@@ -80,7 +80,7 @@ const demoAccounts = [
   
   // DEAN ACCOUNTS
   {
-    name: 'Dr. William Anderson',
+    name: 'Dean',
     email: 'dean@demo.com',
     password: 'dean123',
     role: 'admin',
@@ -89,7 +89,7 @@ const demoAccounts = [
     phone: '+1234567897'
   },
   {
-    name: 'Dr. Patricia Taylor',
+    name: 'Dean2',
     email: 'dean2@demo.com',
     password: 'dean123',
     role: 'admin',

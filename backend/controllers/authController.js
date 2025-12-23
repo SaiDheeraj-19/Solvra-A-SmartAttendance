@@ -1,45 +1,41 @@
+const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
+// Register a new user
 exports.register = async (req, res) => {
-  const { name, email, password, studentId, department, year, phone, role, employeeId } = req.body;
-  
-  if (!name || !email || !password) {
-    return res.status(400).json({ msg: 'Name, email, and password are required' });
-  }
-
   try {
+    const { name, email, password, role, studentId, department } = req.body;
+
     // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ msg: 'User with this email already exists' });
-
-    // Check if student ID already exists (if provided)
-    if (studentId) {
-      const existingStudent = await User.findOne({ studentId });
-      if (existingStudent) return res.status(400).json({ msg: 'Student ID already exists' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ msg: 'User already exists' });
     }
 
-    // Check if employee ID already exists (if provided)
-    if (employeeId) {
-      const existingEmployee = await User.findOne({ studentId: employeeId }); // Using studentId field for employeeId
-      if (existingEmployee) return res.status(400).json({ msg: 'Employee ID already exists' });
-    }
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
 
-    const hashed = await bcrypt.hash(password, 10);
-    user = await User.create({
+    // Create user
+    const user = new User({
       name,
       email,
-      passwordHash: hashed,
-      studentId: studentId || employeeId, // Use studentId field for both student and employee IDs
-      department,
-      year,
-      phone,
-      role: role || 'student'
+      passwordHash,
+      role: role || 'student',
+      studentId,
+      department
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET || 'secretkey',
+      { expiresIn: '7d' }
+    );
+
     res.status(201).json({
       token,
       user: {
@@ -48,31 +44,39 @@ exports.register = async (req, res) => {
         email: user.email,
         role: user.role,
         studentId: user.studentId,
-        department: user.department,
-        year: user.year,
-        phone: user.phone,
-        createdAt: user.createdAt
+        department: user.department
       }
     });
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ msg: 'Server error during registration' });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
+// Login user
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ msg: 'Email and password are required' });
-
   try {
+    const { email, password } = req.body;
+
+    // Find user
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
+    if (!user) {
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
 
-    const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match) return res.status(400).json({ msg: 'Invalid credentials' });
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET || 'secretkey',
+      { expiresIn: '7d' }
+    );
+
     res.json({
       token,
       user: {
@@ -81,64 +85,59 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
         studentId: user.studentId,
-        department: user.department,
-        year: user.year,
-        phone: user.phone,
-        createdAt: user.createdAt
+        department: user.department
       }
     });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ msg: 'Server error during login' });
-  }
-};
-
-exports.getProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    res.json(user);
-  } catch (err) {
-    console.error('Get profile error:', err);
+  } catch (error) {
+    console.error(error.message);
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
+// Get current user profile
+exports.getProfile = async (req, res) => {
+  try {
+    // Exclude password from returned user data
+    const user = await User.findById(req.user.id).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Update user profile
 exports.updateProfile = async (req, res) => {
   try {
     const { name, email, studentId, department, year, phone, profilePicture } = req.body;
-    
-    // Check if email is being changed and if it already exists
-    if (email && email !== req.user.email) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) return res.status(400).json({ msg: 'Email already exists' });
-    }
 
-    // Check if student ID is being changed and if it already exists
-    if (studentId && studentId !== req.user.studentId) {
-      const existingStudent = await User.findOne({ studentId });
-      if (existingStudent) return res.status(400).json({ msg: 'Student ID already exists' });
-    }
+    // Build user object
+    const userFields = {};
+    if (name) userFields.name = name;
+    if (email) userFields.email = email;
+    if (studentId) userFields.studentId = studentId;
+    if (department) userFields.department = department;
+    if (year) userFields.year = year;
+    if (phone) userFields.phone = phone;
+    if (profilePicture) userFields.profilePicture = profilePicture;
 
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (studentId !== undefined) updateData.studentId = studentId;
-    if (department) updateData.department = department;
-    if (year) updateData.year = year;
-    if (phone) updateData.phone = phone;
-    if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
-
+    // Update user
     const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updateData,
+      req.user.id,
+      { $set: userFields },
       { new: true, runValidators: true }
-    ).select('-password');
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
 
     res.json(user);
-  } catch (err) {
-    console.error('Update profile error:', err);
+  } catch (error) {
+    console.error(error.message);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -147,170 +146,88 @@ exports.updateProfile = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ msg: 'Current password and new password are required' });
-    }
+    const userId = req.user.id;
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ msg: 'New password must be at least 6 characters long' });
-    }
-
-    // Get user with password
-    const user = await User.findById(req.user._id);
+    // Find user
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isCurrentPasswordValid) {
+    // Check current password
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
       return res.status(400).json({ msg: 'Current password is incorrect' });
     }
 
     // Hash new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
 
     // Update password
-    await User.findByIdAndUpdate(req.user._id, { passwordHash: hashedNewPassword });
+    await User.findByIdAndUpdate(userId, { passwordHash });
 
     res.json({ msg: 'Password changed successfully' });
-  } catch (err) {
-    console.error('Change password error:', err);
+  } catch (error) {
+    console.error(error.message);
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
-// Get all faculty members
+// Get faculty members
 exports.getFaculty = async (req, res) => {
   try {
-    const faculty = await User.find({ role: { $in: ['faculty', 'admin'] } })
-      .select('name email department phone isActive createdAt')
-      .sort({ name: 1 });
-    
-    res.status(200).json(faculty);
+    const faculty = await User.find({ role: 'faculty' }).select('-passwordHash');
+    res.json(faculty);
   } catch (error) {
-    console.error('Error fetching faculty:', error);
-    res.status(500).json({ msg: 'Server error fetching faculty' });
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Get all users (admin only)
 exports.getAllUsers = async (req, res) => {
   try {
-    // Check if user has admin privileges
-    const currentUser = await User.findById(req.user._id);
-    if (currentUser.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
-    }
-
-    let query = {};
-    
-    // Filter by role if specified
-    if (req.query.role && req.query.role !== 'all') {
-      if (req.query.role === 'admin') {
-        query.role = 'admin';
-      } else {
-        query.role = req.query.role;
-      }
-    }
-
-    const users = await User.find(query)
-      .select('-password')
-      .sort({ createdAt: -1 });
-    
-    res.status(200).json(users);
+    const users = await User.find().select('-passwordHash');
+    res.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ msg: 'Server error fetching users' });
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Update user (admin only)
 exports.updateUser = async (req, res) => {
   try {
-    // Check if user has admin privileges
-    const currentUser = await User.findById(req.user._id);
-    if (currentUser.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
-    }
-
-    const { name, email, role, department, year, studentId, phone, password } = req.body;
-    const userId = req.params.id;
-
-    // Check if email is being changed and if it already exists
-    if (email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
-      if (existingUser) {
-        return res.status(400).json({ msg: 'Email already exists' });
-      }
-    }
-
-    // Check if student ID is being changed and if it already exists
-    if (studentId) {
-      const existingStudent = await User.findOne({ studentId, _id: { $ne: userId } });
-      if (existingStudent) {
-        return res.status(400).json({ msg: 'Student/Employee ID already exists' });
-      }
-    }
-
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (role) updateData.role = role;
-    if (department) updateData.department = department;
-    if (year) updateData.year = year;
-    if (studentId !== undefined) updateData.studentId = studentId;
-    if (phone) updateData.phone = phone;
-    
-    // Only update password if provided
-    if (password && password.trim() !== '') {
-      const hashed = await bcrypt.hash(password, 10);
-      updateData.passwordHash = hashed;
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
       { new: true, runValidators: true }
-    ).select('-password');
+    ).select('-passwordHash');
 
-    if (!updatedUser) {
+    if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    res.status(200).json(updatedUser);
+    res.json(user);
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ msg: 'Server error updating user' });
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Delete user (admin only)
 exports.deleteUser = async (req, res) => {
   try {
-    // Check if user has admin privileges
-    const currentUser = await User.findById(req.user._id);
-    if (currentUser.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin privileges required.' });
-    }
+    const user = await User.findByIdAndDelete(req.params.id);
 
-    const userId = req.params.id;
-
-    // Prevent users from deleting themselves
-    if (userId === req.user._id.toString()) {
-      return res.status(400).json({ msg: 'You cannot delete your own account' });
-    }
-
-    const deletedUser = await User.findByIdAndDelete(userId);
-
-    if (!deletedUser) {
+    if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    res.status(200).json({ msg: 'User deleted successfully' });
+    res.json({ msg: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ msg: 'Server error deleting user' });
+    console.error(error.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };

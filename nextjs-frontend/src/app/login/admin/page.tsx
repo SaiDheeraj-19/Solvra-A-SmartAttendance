@@ -120,12 +120,18 @@ export default function AdminLoginPage() {
               <p className="text-sm text-text-secondary italic">Intelligence that never misses a mark</p>
             </div>
           </Link>
-          <p className="text-text-primary mt-4">
-            Sign in to Admin Portal
-          </p>
+          <div className="mt-6 p-4 bg-accent-bronze/10 rounded-xl border-l-4 border-accent-bronze">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Shield className="w-6 h-6 text-accent-bronze" />
+              <h2 className="text-subheader-sm text-text-primary font-medium">Admin Portal Access</h2>
+            </div>
+            <p className="text-text-primary">
+              System Administration Login
+            </p>
+          </div>
         </div>
 
-        <div className="premium-card p-6 sm:p-8 rounded-2xl sm:rounded-3xl">
+        <div className="premium-card p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl">
           {/* Error Message */}
           {error && (
             <motion.div 
@@ -150,7 +156,7 @@ export default function AdminLoginPage() {
           
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Email Address</label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Administrator Email</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
                 <input
@@ -166,7 +172,7 @@ export default function AdminLoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Password</label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Administrator Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bronze" />
                 <input
@@ -201,19 +207,19 @@ export default function AdminLoginPage() {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Signing In...
+                  Authenticating...
                 </>
               ) : (
                 <>
                   <Shield className="w-5 h-5" />
-                  Admin Sign In
+                  Access Admin Portal
                 </>
               )}
               {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </motion.button>
           </form>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-primary">
             <Link 
               href="/login" 
               className="text-bronze hover:text-text-primary font-medium flex items-center gap-2"
@@ -230,6 +236,12 @@ export default function AdminLoginPage() {
               Home
             </Link>
           </div>
+        </div>
+        
+        <div className="mt-8 text-center">
+          <p className="text-body-md text-text-secondary">
+            This portal is for authorized system administrators only
+          </p>
         </div>
       </motion.div>
     </main>

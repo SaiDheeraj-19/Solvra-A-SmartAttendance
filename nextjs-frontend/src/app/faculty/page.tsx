@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, BarChart3, Users, Clock, Download, Plus, LogOut, MapPin, Camera, CheckCircle, AlertCircle, User, Edit3, Lock, X, Eye, EyeOff } from 'lucide-react';
+import { QrCode, BarChart3, Users, Clock, Download, Plus, LogOut, MapPin, Camera, CheckCircle, AlertCircle, User, Edit3, Lock, X, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import QRCode from 'qrcode';
 import FaceCamera from '@/components/FaceCamera';
 import Notification from '@/components/Notification';
@@ -60,67 +60,6 @@ export default function FacultyPortal() {
     subject: '',
     class: ''
   });
-
-  // Fetch user profile data and other data on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch profile data
-        const profile = await authAPI.getProfile();
-        setProfileData({
-          name: profile.name || '',
-          department: profile.department || ''
-        });
-        
-        // Set profile picture if it exists
-        if (profile.profilePicture) {
-          setProfilePicture(profile.profilePicture);
-        }
-
-        // Fetch students
-        const studentsData = await facultyAttendanceAPI.getStudents();
-        setStudents(studentsData);
-
-        // Note: Subjects functionality removed for now
-
-        // Fetch faculty overview
-        const overviewData = await facultyAttendanceAPI.getFacultyOverview();
-        setFacultyOverview(overviewData);
-      } catch (error: unknown) {
-        console.error('Failed to fetch data:', error);
-        setNotification({
-          message: error instanceof Error ? error.message : 'Failed to load data. Please try again later.',
-          type: 'error'
-        });
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Timer effect for QR code session
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    if (sessionActive && sessionTimer > 0) {
-      timer = setTimeout(() => {
-        setSessionTimer(prev => prev - 1);
-      }, 1000);
-    } else if (sessionActive && sessionTimer === 0) {
-      // Session expired
-      setSessionActive(false);
-      setNotification({
-        message: 'QR code session has expired.',
-        type: 'warning'
-      });
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [sessionActive, sessionTimer]);
 
   // Campus location: Latitude: 15.775002 | Longitude: 78.057125
   const campusLocation = {
@@ -201,6 +140,45 @@ export default function FacultyPortal() {
     }
   };
 
+  // Fetch user profile data and other data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch profile data
+        const profile = await authAPI.getProfile();
+        setProfileData({
+          name: profile.name || '',
+          department: profile.department || ''
+        });
+        
+        // Set profile picture if it exists
+        if (profile.profilePicture) {
+          setProfilePicture(profile.profilePicture);
+        }
+
+        // Fetch students
+        const studentsData = await facultyAttendanceAPI.getStudents();
+        setStudents(studentsData);
+
+        // Note: Subjects functionality removed for now
+
+        // Fetch faculty overview
+        const overviewData = await facultyAttendanceAPI.getFacultyOverview();
+        setFacultyOverview(overviewData);
+      } catch (error: unknown) {
+        console.error('Failed to fetch data:', error);
+        setNotification({
+          message: error instanceof Error ? error.message : 'Failed to load data. Please try again later.',
+          type: 'error'
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -227,27 +205,20 @@ export default function FacultyPortal() {
 
   return (
     <main className="min-h-screen bg-primary-bg">
-      {/* Notification */}
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-      
+      {/* Faculty Portal Header - Clearly identifies this as the Faculty Portal */}
       <header className="sticky top-0 z-50 bg-primary-bg/80 backdrop-blur-sm border-b border-primary">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-accent-bronze flex items-center justify-center">
-              <Users className="w-5 h-5 text-white" />
-            </div>
+            <GraduationCap className="w-8 h-8 text-accent-bronze" />
             <div>
-              <h1 className="text-subheader-md text-text-primary font-medium">{profileData.name || 'Faculty Member'}</h1>
-              <p className="text-body-md text-text-secondary">{profileData.department ? `${profileData.department} Department` : 'Department'}</p>
+              <h1 className="text-subheader-md text-text-primary font-medium">Faculty Portal</h1>
+              <p className="text-body-md text-text-secondary">Class Management Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-body-md text-text-primary bg-accent-bronze/10 px-3 py-1 rounded-full">
+              {profileData.name || 'Faculty User'} ({profileData.department || 'Department'})
+            </span>
             <button 
               onClick={handleLogout}
               className="logout-button text-text-secondary hover:text-bronze transition-colors flex items-center gap-2"

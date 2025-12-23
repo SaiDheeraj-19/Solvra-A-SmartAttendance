@@ -419,8 +419,7 @@ export const getUserDashboardPath = (userRole: string) => {
       return '/student';
     case 'faculty':
       return '/faculty';
-    case 'hod':
-    case 'dean':
+    case 'admin':
       return '/admin';
     default:
       return '/student'; // Default fallback

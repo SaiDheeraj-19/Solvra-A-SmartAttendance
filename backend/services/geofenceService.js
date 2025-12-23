@@ -40,4 +40,25 @@ async function updateGeofence({ center, radiusMeters, updatedBy, note }) {
   return doc;
 }
 
-module.exports = { loadFromDb, getGeofence, updateGeofence };
+// Update existing geofence in DB and refresh cache
+async function updateExistingGeofence(id, { center, radiusMeters, updatedBy, note }) {
+  if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') {
+    throw new Error('Invalid center coordinates');
+  }
+  if (typeof radiusMeters !== 'number' || radiusMeters <= 0) {
+    throw new Error('Invalid radiusMeters');
+  }
+
+  const doc = await Geofence.findByIdAndUpdate(
+    id, 
+    { center, radiusMeters, updatedBy, note },
+    { new: true, runValidators: true }
+  );
+  
+  if (doc) {
+    cached = { center: doc.center, radiusMeters: doc.radiusMeters, source: 'db', id: doc._id };
+  }
+  return doc;
+}
+
+module.exports = { loadFromDb, getGeofence, updateGeofence, updateExistingGeofence };

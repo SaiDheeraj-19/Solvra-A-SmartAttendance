@@ -9,8 +9,8 @@ async function testLogin() {
     await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/smartattendance');
     console.log('✅ Connected to MongoDB');
 
-    // Test user credentials
-    const email = 'student@demo.com';
+    // Test user credentials (using demo account)
+    const email = 'student2@demo.com';
     const password = 'student123';
 
     // Find user
@@ -24,7 +24,7 @@ async function testLogin() {
     console.log('✅ User found:', user.name);
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (isMatch) {
       console.log('✅ Password matches');
     } else {

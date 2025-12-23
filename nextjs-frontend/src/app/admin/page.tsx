@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Camera, Settings, BarChart3, Shield, TrendingUp, UserPlus, Search, MapPin, LogOut, Plus, X } from 'lucide-react';
+import { Users, Camera, Settings, BarChart3, Shield, TrendingUp, UserPlus, Search, MapPin, LogOut, Plus, X, Edit3, QrCode } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { authAPI, redirectToLogin } from '@/services/api';
 
@@ -82,6 +82,20 @@ export default function AdminPortal() {
     }
   };
 
+  // Format role for display
+  const formatRole = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrator';
+      case 'faculty':
+        return 'Faculty';
+      case 'student':
+        return 'Student';
+      default:
+        return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  };
+
   const totalUsers = users.length;
   const activeSessions = 23; // This would come from an API in a real implementation
   const avgAttendance = 87.3; // This would come from an API in a real implementation
@@ -122,16 +136,20 @@ export default function AdminPortal() {
 
   return (
     <main className="min-h-screen bg-primary-bg">
+      {/* Admin Portal Header - Clearly identifies this as the Admin Portal */}
       <header className="sticky top-0 z-50 bg-primary-bg/80 backdrop-blur-sm border-b border-primary">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Shield className="w-8 h-8 text-accent-bronze" />
             <div>
-              <h1 className="text-subheader-md text-text-primary font-medium">{profileData.name || 'Admin User'}</h1>
-              <p className="text-body-md text-text-secondary">{profileData.role ? profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1) + ' Role' : 'Administrator'}</p>
+              <h1 className="text-subheader-md text-text-primary font-medium">Admin Portal</h1>
+              <p className="text-body-md text-text-secondary">System Administration Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <span className="text-body-md text-text-primary bg-accent-bronze/10 px-3 py-1 rounded-full">
+              {profileData.name || 'Admin User'} ({formatRole(profileData.role || 'Administrator')})
+            </span>
             <button 
               onClick={handleLogout}
               className="logout-button text-text-secondary hover:text-bronze transition-colors flex items-center gap-2"
@@ -144,6 +162,7 @@ export default function AdminPortal() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Admin Portal Stats - Clearly shows administrative metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
             <motion.div
@@ -152,7 +171,7 @@ export default function AdminPortal() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -5 }}
-              className="premium-card p-6 rounded-xl shadow-soft"
+              className="premium-card p-6 rounded-xl shadow-soft border-l-4 border-accent-bronze"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-lg bg-accent-bronze/10 flex items-center justify-center">
@@ -166,14 +185,15 @@ export default function AdminPortal() {
           ))}
         </div>
 
+        {/* Admin Portal Navigation - Clearly labeled administrative functions */}
         <div className="premium-card rounded-xl shadow-soft overflow-hidden">
-          <div className="border-b border-primary px-6">
+          <div className="border-b border-primary px-6 bg-accent-bronze/5">
             <div className="flex gap-8">
               {[
-                { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                { id: 'users', label: 'Users', icon: Users },
+                { id: 'analytics', label: 'System Analytics', icon: BarChart3 },
+                { id: 'users', label: 'User Management', icon: Users },
                 { id: 'faces', label: 'Face Data', icon: Camera },
-                { id: 'settings', label: 'Settings', icon: Settings },
+                { id: 'settings', label: 'System Settings', icon: Settings },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -192,30 +212,45 @@ export default function AdminPortal() {
           </div>
 
           <div className="p-8">
+            {/* Analytics Tab - System-wide analytics */}
             {activeTab === 'analytics' && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <h2 className="text-subheader-lg text-text-primary mb-6 font-serif">System Analytics</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-subheader-lg text-text-primary font-serif">System Analytics Dashboard</h2>
+                  <span className="text-body-md text-text-secondary bg-accent-bronze/10 px-3 py-1 rounded-full">
+                    Administrative View
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="chart-container h-80 flex items-center justify-center rounded-xl">
-                    <p className="text-text-secondary text-body-md">Attendance Trend Chart</p>
+                  <div className="chart-container h-80 flex items-center justify-center rounded-xl bg-accent-bronze/5 border border-primary">
+                    <div className="text-center">
+                      <BarChart3 className="w-12 h-12 text-accent-bronze mx-auto mb-4" />
+                      <p className="text-text-secondary text-body-md">Attendance Trend Analytics</p>
+                      <p className="text-text-primary text-body-lg mt-2">System-wide attendance patterns</p>
+                    </div>
                   </div>
-                  <div className="chart-container h-80 flex items-center justify-center rounded-xl">
-                    <p className="text-text-secondary text-body-md">Department Performance</p>
+                  <div className="chart-container h-80 flex items-center justify-center rounded-xl bg-accent-bronze/5 border border-primary">
+                    <div className="text-center">
+                      <TrendingUp className="w-12 h-12 text-accent-bronze mx-auto mb-4" />
+                      <p className="text-text-secondary text-body-md">Department Performance</p>
+                      <p className="text-text-primary text-body-lg mt-2">Cross-department analytics</p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             )}
 
+            {/* Users Tab - User management */}
             {activeTab === 'users' && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-subheader-lg text-text-primary font-serif">User Management</h2>
+                  <h2 className="text-subheader-lg text-text-primary font-serif">User Management System</h2>
                   <button 
                     onClick={() => {
                       // Reset form data
@@ -233,7 +268,7 @@ export default function AdminPortal() {
                     className="premium-button primary px-6 py-3 rounded-full text-label uppercase tracking-wider flex items-center gap-2"
                   >
                     <UserPlus className="w-5 h-5" />
-                    Add User
+                    Register New User
                   </button>
                 </div>
 
@@ -242,7 +277,7 @@ export default function AdminPortal() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
                     <input
                       type="text"
-                      placeholder="Search users..."
+                      placeholder="Search users by name, email, or role..."
                       className="premium-input w-full pl-12 pr-4 py-3 rounded-full text-body-md"
                     />
                   </div>
@@ -258,37 +293,46 @@ export default function AdminPortal() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {users.map((user, i: number) => (
-                      <div key={i} className="premium-card p-4 rounded-xl flex items-center justify-between hover:shadow-soft transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-accent-bronze flex items-center justify-center">
-                            <Users className="w-6 h-6 text-white" />
+                    <div className="grid grid-cols-1 gap-4">
+                      {users.map((user) => (
+                        <div key={user.id} className="premium-card p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between hover:shadow-soft transition-all border-l-4 border-accent-bronze">
+                          <div className="flex items-center gap-4 mb-4 md:mb-0">
+                            <div className="w-12 h-12 rounded-full bg-accent-bronze flex items-center justify-center">
+                              <Users className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-body-lg text-text-primary font-medium">{user.name}</p>
+                              <p className="text-body-md text-text-secondary">{user.email}</p>
+                              <span className="inline-block mt-1 px-2 py-1 rounded-full bg-primary-card text-label uppercase tracking-wider">
+                                {user.role}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-body-lg text-text-primary font-medium">{user.name}</p>
-                            <p className="text-body-md text-text-secondary">{user.email} • {user.role}</p>
+                          <div className="flex items-center gap-4">
+                            <span className="px-4 py-2 rounded-full bg-green-100 text-green-800 text-label font-medium">Active</span>
+                            <button className="text-text-secondary hover:text-bronze transition-colors p-2">
+                              <Settings className="w-5 h-5" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className="px-4 py-2 rounded-full bg-green-100 text-green-800 text-label font-medium">Active</span>
-                          <button className="text-text-secondary hover:text-bronze transition-colors">
-                            <Settings className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </motion.div>
             )}
 
+            {/* Faces Tab - Face data management */}
             {activeTab === 'faces' && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-subheader-lg text-text-primary mb-6 font-serif">Face Data Management</h2>
+                  <div>
+                    <h2 className="text-subheader-lg text-text-primary mb-2 font-serif">Face Data Management</h2>
+                    <p className="text-body-md text-text-secondary">Manage biometric face registration for all users</p>
+                  </div>
                   <button 
                     onClick={() => setShowFaceRegistration(true)}
                     className="premium-button primary px-6 py-3 rounded-full text-label uppercase tracking-wider flex items-center gap-2"
@@ -298,15 +342,26 @@ export default function AdminPortal() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {[1, 2, 3, 4, 5, 6].map((item) => (
-                    <div key={item} className="premium-card p-6 rounded-xl text-center hover:shadow-soft transition-all">
+                    <div key={item} className="premium-card p-6 rounded-xl text-center hover:shadow-soft transition-all border border-primary">
                       <div className="w-24 h-24 rounded-full bg-accent-bronze/10 mx-auto mb-4 flex items-center justify-center">
                         <Camera className="w-10 h-10 text-accent-bronze" />
                       </div>
                       <p className="text-body-lg text-text-primary font-medium mb-1">Student {item}</p>
-                      <p className="text-body-md text-text-secondary mb-4">STU202400{item}</p>
-                      <span className="px-4 py-2 rounded-full bg-green-100 text-green-800 text-label font-medium">Registered</span>
+                      <p className="text-body-md text-text-secondary mb-2">STU202400{item}</p>
+                      <p className="text-body-sm text-text-secondary mb-4">Computer Science</p>
+                      <div className="flex justify-between items-center">
+                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-label font-medium">Registered</span>
+                        <div className="flex gap-2">
+                          <button className="text-text-secondary hover:text-bronze transition-colors">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button className="text-text-secondary hover:text-red-500 transition-colors">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -390,17 +445,28 @@ export default function AdminPortal() {
               </motion.div>
             )}
 
+            {/* Settings Tab - System configuration */}
             {activeTab === 'settings' && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <h2 className="text-subheader-lg text-text-primary mb-6 font-serif">System Settings</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-subheader-lg text-text-primary mb-2 font-serif">System Configuration</h2>
+                    <p className="text-body-md text-text-secondary">Manage global system settings and policies</p>
+                  </div>
+                  <span className="text-body-md text-text-primary bg-accent-bronze/10 px-3 py-1 rounded-full">
+                    Admin Only
+                  </span>
+                </div>
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="premium-card p-6 rounded-xl shadow-soft">
+                  {/* Geofencing Settings */}
+                  <div className="premium-card p-6 rounded-xl shadow-soft border border-primary">
                     <div className="flex items-center gap-3 mb-6">
                       <MapPin className="w-6 h-6 text-accent-bronze" />
-                      <h3 className="text-subheader-md text-text-primary font-medium">Geofencing</h3>
+                      <h3 className="text-subheader-md text-text-primary font-medium">Geofencing Configuration</h3>
                     </div>
                     <div className="space-y-4">
                       <div>
@@ -432,35 +498,74 @@ export default function AdminPortal() {
                       </div>
                       <button
                         onClick={saveGeofenceSettings}
-                        className="premium-button primary px-6 py-3 rounded-full text-label uppercase tracking-wider"
+                        className="premium-button primary px-6 py-3 rounded-full text-label uppercase tracking-wider w-full"
                       >
                         Save Geofence Settings
                       </button>
                     </div>
                   </div>
 
-                  <div className="premium-card p-6 rounded-xl shadow-soft">
+                  {/* Security Settings */}
+                  <div className="premium-card p-6 rounded-xl shadow-soft border border-primary">
                     <div className="flex items-center gap-3 mb-6">
                       <Shield className="w-6 h-6 text-accent-bronze" />
-                      <h3 className="text-subheader-md text-text-primary font-medium">Security</h3>
+                      <h3 className="text-subheader-md text-text-primary font-medium">Security Policies</h3>
                     </div>
                     <div className="space-y-4">
                       {[
-                        { label: 'Face Verification Required', enabled: true },
-                        { label: 'Geofencing Enabled', enabled: true },
-                        { label: 'Email Notifications', enabled: false },
+                        { label: 'Face Verification Required', enabled: true, description: 'Mandatory biometric verification for all check-ins' },
+                        { label: 'Geofencing Enabled', enabled: true, description: 'Location-based attendance validation' },
+                        { label: 'Email Notifications', enabled: false, description: 'System alerts and reports via email' },
+                        { label: 'Proxy Attendance Allowed', enabled: false, description: 'Permit authorized users to check-in for others' },
                       ].map((setting, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="text-body-md text-text-primary uppercase tracking-wider">{setting.label}</span>
-                          <div className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
-                            setting.enabled ? 'bg-accent-bronze' : 'bg-primary-card border border-primary'
-                          }`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
-                              setting.enabled ? 'right-1' : 'left-1'
-                            }`} />
+                        <div key={i} className="border-b border-primary pb-4 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-body-md text-text-primary font-medium">{setting.label}</span>
+                            <div className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${
+                              setting.enabled ? 'bg-accent-bronze' : 'bg-primary-card border border-primary'
+                            }`}>
+                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
+                                setting.enabled ? 'right-1' : 'left-1'
+                              }`} />
+                            </div>
                           </div>
+                          <p className="text-body-sm text-text-secondary">{setting.description}</p>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                  
+                  {/* QR Code Settings */}
+                  <div className="premium-card p-6 rounded-xl shadow-soft border border-primary lg:col-span-2">
+                    <div className="flex items-center gap-3 mb-6">
+                      <QrCode className="w-6 h-6 text-accent-bronze" />
+                      <h3 className="text-subheader-md text-text-primary font-medium">QR Code Configuration</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Expiration Time (minutes)</label>
+                        <input
+                          type="number"
+                          defaultValue="15"
+                          className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Refresh Interval (seconds)</label>
+                        <input
+                          type="number"
+                          defaultValue="30"
+                          className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Security Level</label>
+                        <select className="premium-input w-full px-4 py-3 rounded-lg text-body-md">
+                          <option>Standard</option>
+                          <option>Enhanced</option>
+                          <option>Maximum</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
