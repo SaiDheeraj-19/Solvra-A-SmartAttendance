@@ -6,10 +6,11 @@ const nextConfig: NextConfig = {
     domains: ['localhost'],
   },
   async rewrites() {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5005';
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:5005/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
