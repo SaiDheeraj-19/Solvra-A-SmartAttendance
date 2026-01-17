@@ -31,6 +31,7 @@ export default function EnhancedFacultyDashboard() {
     // Create QR data with location information
     const qrContent = {
       type: 'attendance',
+      source: 'SOLVRA_FACULTY_DASHBOARD', // Added for validation
       subject: subject,
       class: className,
       duration: duration,
@@ -157,8 +158,8 @@ export default function EnhancedFacultyDashboard() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 py-4 border-b-2 transition-all font-medium ${activeTab === tab.id
-                      ? 'border-accent-bronze text-accent-bronze'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
+                    ? 'border-accent-bronze text-accent-bronze'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
                     }`}
                 >
                   <tab.icon className="w-5 h-5" />

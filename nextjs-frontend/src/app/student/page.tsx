@@ -73,21 +73,49 @@ export default function StudentDashboard() {
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   // Note: qrWebcamRef removed as QR scanning is handled by AutoQRScanner component
 
-  // Campus location: Latitude: 15.775002 | Longitude: 78.057125
-  const campusLocation = {
-    lat: 15.775002,
-    lng: 78.057125,
-    radius: 500 // meters
-  };
+  // Campus location state
+  const [geofence, setGeofence] = useState<{ center: { lat: number, lng: number }, radiusMeters: number } | null>(null);
+
+  useEffect(() => {
+    // Fetch geofence settings
+    const fetchGeofence = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch('/api/admin/geofence', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.geofence) {
+          setGeofence(data.geofence);
+        }
+      } catch (error) {
+        console.error('Failed to load geofence:', error);
+      }
+    };
+    fetchGeofence();
+  }, []);
 
   // Check if user is within geofence
   const checkGeofence = (lat: number, lng: number) => {
+    // Use fetched geofence or fallback to default
+    const target = geofence ? {
+      lat: geofence.center.lat,
+      lng: geofence.center.lng,
+      radius: geofence.radiusMeters
+    } : {
+      lat: 15.775002,
+      lng: 78.057125,
+      radius: 500
+    };
+
     // Haversine formula to calculate distance between two points
     const R = 6371e3; // Earth radius in meters
-    const lat1 = campusLocation.lat * Math.PI / 180;
+    const lat1 = target.lat * Math.PI / 180;
     const lat2 = lat * Math.PI / 180;
-    const deltaLat = (lat - campusLocation.lat) * Math.PI / 180;
-    const deltaLng = (lng - campusLocation.lng) * Math.PI / 180;
+    const deltaLat = (lat - target.lat) * Math.PI / 180;
+    const deltaLng = (lng - target.lng) * Math.PI / 180;
 
     const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(lat1) * Math.cos(lat2) *
@@ -95,8 +123,9 @@ export default function StudentDashboard() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     const distance = R * c;
+    console.log(`Distance: ${distance}m, Radius: ${target.radius}m, Inside: ${distance <= target.radius}`);
 
-    return distance <= campusLocation.radius;
+    return distance <= target.radius;
   };
 
   // Get user's current location with improved error handling and timeout
@@ -224,50 +253,67 @@ export default function StudentDashboard() {
   // Fetch user profile data and attendance data on component mount
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        redirectToLogin();
+        return;
+      }
+
       try {
         // Fetch profile data
-        const profile = await authAPI.getProfile();
-        setProfileData({
-          name: profile.name || '',
-          email: profile.email || '',
-          studentId: profile.studentId || '',
-          department: profile.department || '',
-          year: profile.year || '',
-          phone: profile.phone || ''
-        });
+        try {
+          const profile = await authAPI.getProfile();
+          setProfileData({
+            name: profile.name || '',
+            email: profile.email || '',
+            studentId: profile.studentId || '',
+            department: profile.department || '',
+            year: profile.year || '',
+            phone: profile.phone || ''
+          });
 
-        // Set profile picture if it exists
-        if (profile.profilePicture) {
-          setProfilePicture(profile.profilePicture);
+          if (profile.profilePicture) {
+            setProfilePicture(profile.profilePicture);
+          }
+        } catch (e) {
+          console.error('Profile fetch failed:', e);
         }
 
         // Fetch attendance history
-        const history = await attendanceAPI.getAttendanceHistory();
-        setAttendanceHistory(history);
+        try {
+          const history = await attendanceAPI.getAttendanceHistory();
+          setAttendanceHistory(history);
+        } catch (e) {
+          console.warn('History fetch failed:', e);
+          // Don't crash, just empty history
+          setAttendanceHistory([]);
+        }
 
         // Fetch attendance summary
-        const summary = await attendanceAPI.getSummary();
-        setAttendanceStats(summary);
+        try {
+          const summary = await attendanceAPI.getSummary();
+          setAttendanceStats(summary);
+        } catch (e) {
+          console.warn('Summary fetch failed:', e);
+          setAttendanceStats({ present: 0, absent: 0 });
+        }
 
-        // Fetch face status and security settings
+        // Fetch face status
         try {
           const faceStatus = await faceService.getFaceStatus();
-          if (faceStatus.securitySettings) {
+          if (faceStatus && faceStatus.securitySettings) {
             setFaceSettings({
               requireFaceVerification: faceStatus.securitySettings.requireFaceVerification || true,
               allowProxyAttendance: faceStatus.securitySettings.allowProxyAttendance || false
             });
           }
-        } catch (error) {
-          console.warn('Failed to fetch face status:', error);
-          // Continue with default settings if face status fetch fails
+        } catch (e) {
+          // Silent fail for face settings
         }
+
       } catch (error: unknown) {
-        console.error('Failed to fetch data:', error);
-        setNotification({
-          message: error instanceof Error ? error.message : 'Failed to load data. Please try again later.',
-          type: 'error'
-        });
+        // Global error handler (should rarely be hit now)
+        console.error('Critical initialization error:', error);
       } finally {
         setLoadingAttendance(false);
       }
@@ -598,13 +644,40 @@ export default function StudentDashboard() {
                     ) : showQRScanner ? (
                       <AutoQRScanner
                         onScan={(data) => {
-                          setScannedData(data);
-                          setQrScanned(true);
-                          setShowQRScanner(false);
-                          // Automatically open face verification after QR scan
-                          setTimeout(() => {
-                            setCameraActive(true);
-                          }, 1000);
+                          if (!data) return;
+
+                          try {
+                            // Attempt to parse validation data
+                            let isValid = false;
+
+                            try {
+                              const parsed = JSON.parse(data);
+                              // Validate signature/source
+                              if (parsed.source === 'SOLVRA_FACULTY_DASHBOARD' && parsed.type === 'attendance') {
+                                isValid = true;
+                              }
+                            } catch (e) {
+                              // Not JSON, check for legacy string format if any (optional)
+                            }
+
+                            if (!isValid) {
+                              setNotification({
+                                message: 'Invalid QR Code. Please scan a valid Faculty QR Code.',
+                                type: 'error'
+                              });
+                              return;
+                            }
+
+                            setScannedData(data);
+                            setQrScanned(true);
+                            setShowQRScanner(false);
+                            // Automatically open face verification after QR scan
+                            setTimeout(() => {
+                              setCameraActive(true);
+                            }, 1000);
+                          } catch (e) {
+                            console.error("QR Validation error", e);
+                          }
                         }}
                         onClose={() => setShowQRScanner(false)}
                         title="Auto QR Scanner"
