@@ -7,11 +7,11 @@ import FaceCamera from '@/components/FaceCamera';
 import AutoQRScanner from '@/components/AutoQRScanner';
 import { faceService } from '@/services/faceService';
 import { authAPI, attendanceAPI, redirectToLogin } from '@/services/api';
-import Notification from '@/components/Notification';
+// import Notification from '@/components/Notification';
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState('idle'); // idle, pending, verified, failed, cancelled
   const [locationError, setLocationError] = useState<string | null>(null); // Specific error message
   const [qrScanned, setQrScanned] = useState(false);
@@ -31,6 +31,7 @@ export default function StudentDashboard() {
   });
   // Add state for profile picture
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   // Add state for editing profile
   const [editingProfile, setEditingProfile] = useState(false);
@@ -58,15 +59,16 @@ export default function StudentDashboard() {
     requireFaceVerification: true,
     allowProxyAttendance: false
   });
-  
+
   const [settings, setSettings] = useState({
     notifications: true,
     darkMode: false,
     faceVerification: true,
     language: 'en'
   });
-  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'warning' | 'info'} | null>(null);
-  const [attendanceHistory, setAttendanceHistory] = useState<Array<{id: string, date: string, checkInAt?: string, checkOutAt?: string, status: string, subject?: string}>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
+  const [attendanceHistory, setAttendanceHistory] = useState<Array<{ id: string, date: string, checkInAt?: string, checkOutAt?: string, status: string, subject?: string }>>([]);
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, absent: 0 });
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   // Note: qrWebcamRef removed as QR scanning is handled by AutoQRScanner component
@@ -82,18 +84,18 @@ export default function StudentDashboard() {
   const checkGeofence = (lat: number, lng: number) => {
     // Haversine formula to calculate distance between two points
     const R = 6371e3; // Earth radius in meters
-    const lat1 = campusLocation.lat * Math.PI/180;
-    const lat2 = lat * Math.PI/180;
-    const deltaLat = (lat - campusLocation.lat) * Math.PI/180;
-    const deltaLng = (lng - campusLocation.lng) * Math.PI/180;
-    
-    const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(deltaLng/2) * Math.sin(deltaLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    
+    const lat1 = campusLocation.lat * Math.PI / 180;
+    const lat2 = lat * Math.PI / 180;
+    const deltaLat = (lat - campusLocation.lat) * Math.PI / 180;
+    const deltaLng = (lng - campusLocation.lng) * Math.PI / 180;
+
+    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
     const distance = R * c;
-    
+
     return distance <= campusLocation.radius;
   };
 
@@ -109,10 +111,10 @@ export default function StudentDashboard() {
       });
       return;
     }
-    
+
     setLocationStatus('pending');
     setLocationError(null);
-    
+
     // Set a manual timeout to prevent hanging
     const timeoutId = setTimeout(() => {
       setLocationStatus('failed');
@@ -123,17 +125,17 @@ export default function StudentDashboard() {
       });
       console.warn('Geolocation request manually timed out after 20 seconds');
     }, 20000); // 20 seconds timeout
-    
+
     // Request location with detailed error handling
     navigator.geolocation.getCurrentPosition(
       (position) => {
         // Clear the manual timeout
         clearTimeout(timeoutId);
-        
+
         const { latitude, longitude } = position.coords;
         setLocation({ lat: latitude, lng: longitude });
         console.log('Location retrieved:', latitude, longitude);
-        
+
         // Check if user is within campus geofence
         if (checkGeofence(latitude, longitude)) {
           setLocationStatus('verified');
@@ -153,9 +155,9 @@ export default function StudentDashboard() {
       (error) => {
         // Clear the manual timeout
         clearTimeout(timeoutId);
-        
+
         setLocationStatus('failed');
-        
+
         // Provide detailed error messages based on error code
         let errorMessage = '';
         switch (error.code) {
@@ -182,7 +184,7 @@ export default function StudentDashboard() {
             }
             break;
         }
-        
+
         setLocationError(errorMessage);
         setNotification({
           message: errorMessage,
@@ -201,10 +203,10 @@ export default function StudentDashboard() {
   const verifyFaceWithBackend = async (imageData: string) => {
     setFaceVerificationLoading(true);
     setFaceVerificationError(null);
-    
+
     try {
       const result = await faceService.verifyFace(imageData);
-      
+
       if (result.verified) {
         setFaceVerified(true);
         setCameraActive(false);
@@ -233,7 +235,7 @@ export default function StudentDashboard() {
           year: profile.year || '',
           phone: profile.phone || ''
         });
-        
+
         // Set profile picture if it exists
         if (profile.profilePicture) {
           setProfilePicture(profile.profilePicture);
@@ -290,9 +292,9 @@ export default function StudentDashboard() {
   const attendancePercentage = totalClasses > 0 ? Math.round((attendanceStats.present / totalClasses) * 1000) / 10 : 0;
   const perfectWeeks = Math.floor(attendanceStats.present / 5); // Assuming 5 classes per week
   // Show "nil" for new users with no attendance records, otherwise calculate on-time rate
-  const onTimeRate = totalClasses === 0 ? 'nil' : 
-                    attendancePercentage > 90 ? '96%' : 
-                    `${Math.max(80, attendancePercentage - 5)}%`;
+  const onTimeRate = totalClasses === 0 ? 'nil' :
+    attendancePercentage > 90 ? '96%' :
+      `${Math.max(80, attendancePercentage - 5)}%`;
 
   const stats = [
     { label: 'Weekly Attendance', value: `${attendancePercentage}%`, icon: BarChart3, change: totalClasses > 0 ? `+${Math.round((attendanceStats.present / totalClasses) * 100 - 90)}%` : '+0%' },
@@ -319,7 +321,7 @@ export default function StudentDashboard() {
             <span className="text-body-md text-text-primary bg-accent-bronze/10 px-3 py-1 rounded-full">
               {profileData.name || 'Student User'}
             </span>
-            <button 
+            <button
               onClick={handleLogout}
               className="logout-button text-text-secondary hover:text-bronze transition-colors flex items-center gap-2"
             >
@@ -369,11 +371,10 @@ export default function StudentDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 border-b-2 transition-all font-medium ${
-                    activeTab === tab.id
-                      ? 'border-accent-bronze text-accent-bronze'
-                      : 'border-transparent text-text-secondary hover:text-text-primary'
-                  }`}
+                  className={`flex items-center gap-2 py-4 border-b-2 transition-all font-medium ${activeTab === tab.id
+                    ? 'border-accent-bronze text-accent-bronze'
+                    : 'border-transparent text-text-secondary hover:text-text-primary'
+                    }`}
                 >
                   <tab.icon className="w-5 h-5" />
                   <span className="text-label uppercase tracking-wider">{tab.label}</span>
@@ -414,15 +415,14 @@ export default function StudentDashboard() {
                                 {session.subject || 'Attendance Session'}
                               </p>
                               <p className="text-body-md text-text-secondary">
-                                {new Date(session.date).toLocaleDateString()} • {session.checkInAt ? new Date(session.checkInAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                                {new Date(session.date).toLocaleDateString()} • {session.checkInAt ? new Date(session.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                               </p>
                             </div>
                           </div>
-                          <span className={`px-4 py-2 rounded-full text-label font-medium ${
-                            session.status === 'present' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span className={`px-4 py-2 rounded-full text-label font-medium ${session.status === 'present'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                            }`}>
                             {session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Absent'}
                           </span>
                         </div>
@@ -450,13 +450,13 @@ export default function StudentDashboard() {
                     </div>
                     <h3 className="text-subheader-md text-text-primary mb-2 font-medium text-center">Location Verification</h3>
                     <p className="text-body-md text-text-secondary mb-4 text-center">Verify campus location</p>
-                    
+
                     {locationStatus === 'pending' ? (
                       <div className="text-center">
                         <div className="luxury-loader mx-auto mb-4"></div>
                         <p className="text-body-md text-text-secondary">Getting your location...</p>
                         <p className="text-body-sm text-text-secondary mt-2">This may take a few seconds</p>
-                        <button 
+                        <button
                           onClick={() => {
                             setLocationStatus('cancelled');
                             setLocationError('Location request cancelled by user.');
@@ -501,7 +501,7 @@ export default function StudentDashboard() {
                             Please move to the campus area and try again.
                           </p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             // Reset state before trying again
                             setLocationStatus('pending');
@@ -522,10 +522,10 @@ export default function StudentDashboard() {
                         )}
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <p className="text-body-sm text-gray-700">
-                            You cancelled the location request. Click "Retry Location Check" to try again.
+                            You cancelled the location request. Click &quot;Retry Location Check&quot; to try again.
                           </p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             // Reset state before trying again
                             setLocationStatus('pending');
@@ -541,7 +541,7 @@ export default function StudentDashboard() {
                       <div className="text-center">
                         <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                         <p className="text-body-md text-text-secondary mb-4">Location verification required</p>
-                        <button 
+                        <button
                           onClick={() => {
                             // Reset state before starting
                             setLocationStatus('pending');
@@ -561,7 +561,7 @@ export default function StudentDashboard() {
                         <p className="text-body-sm text-text-secondary mt-3">
                           Click above to verify your location on campus
                         </p>
-                        
+
                         {/* Location Permission Help */}
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg text-left">
                           <p className="text-body-sm text-blue-800 font-medium mb-2">💡 Location Access Tips:</p>
@@ -584,7 +584,7 @@ export default function StudentDashboard() {
                     </div>
                     <h3 className="text-subheader-md text-text-primary mb-2 font-medium text-center">QR Code Scan</h3>
                     <p className="text-body-md text-text-secondary mb-4 text-center">Scan instructor code</p>
-                    
+
                     {qrScanned ? (
                       <div className="text-center">
                         <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
@@ -611,7 +611,7 @@ export default function StudentDashboard() {
                         instruction="Position QR code in frame for automatic scanning"
                       />
                     ) : (
-                      <button 
+                      <button
                         onClick={() => setShowQRScanner(true)}
                         className="premium-button primary w-full py-3 rounded-full text-label"
                       >
@@ -627,7 +627,7 @@ export default function StudentDashboard() {
                     </div>
                     <h3 className="text-subheader-md text-text-primary mb-2 font-medium text-center">Face Recognition</h3>
                     <p className="text-body-md text-text-secondary mb-4 text-center">Biometric verification</p>
-                    
+
                     {faceVerified ? (
                       <div className="text-center">
                         <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
@@ -639,7 +639,7 @@ export default function StudentDashboard() {
                         <p className="text-body-md text-text-secondary">Verifying face...</p>
                       </div>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => setCameraActive(true)}
                         className="premium-button primary w-full py-3 rounded-full text-label"
                       >
@@ -727,17 +727,16 @@ export default function StudentDashboard() {
                               {new Date(session.date).toLocaleDateString()}
                             </td>
                             <td className="py-4 px-4 text-body-md text-text-secondary">
-                              {session.checkInAt ? new Date(session.checkInAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                              {session.checkInAt ? new Date(session.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                             </td>
                             <td className="py-4 px-4 text-body-md text-text-secondary">
-                              {session.checkOutAt ? new Date(session.checkOutAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                              {session.checkOutAt ? new Date(session.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                             </td>
                             <td className="py-4 px-4">
-                              <span className={`px-3 py-1 rounded-full text-label font-medium ${
-                                session.status === 'present' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
+                              <span className={`px-3 py-1 rounded-full text-label font-medium ${session.status === 'present'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                                }`}>
                                 {session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Absent'}
                               </span>
                             </td>
@@ -757,16 +756,17 @@ export default function StudentDashboard() {
                 className="max-w-3xl mx-auto"
               >
                 <h2 className="text-header-md text-text-primary mb-8 text-center font-serif">My Profile</h2>
-                
+
                 <div className="space-y-8">
                   <div className="premium-card p-6 rounded-xl">
                     <div className="flex items-center gap-6 mb-6">
                       <div className="relative">
                         <div className="w-24 h-24 rounded-full bg-accent-bronze flex items-center justify-center overflow-hidden">
                           {profilePicture ? (
-                            <img 
-                              src={profilePicture} 
-                              alt="Profile" 
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={profilePicture}
+                              alt="Profile"
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -799,7 +799,7 @@ export default function StudentDashboard() {
                         <h3 className="text-subheader-md text-text-primary font-medium">{profileData.name}</h3>
                         <p className="text-body-md text-text-secondary">{profileData.studentId}</p>
                         <div className="flex gap-2 mt-2">
-                          <button 
+                          <button
                             onClick={() => {
                               // Initialize edited data with current profile data
                               setEditedProfileData(profileData);
@@ -810,7 +810,7 @@ export default function StudentDashboard() {
                             <Edit3 className="w-4 h-4" />
                             Edit Profile
                           </button>
-                          <button 
+                          <button
                             onClick={async () => {
                               try {
                                 // Save any changes including profile picture
@@ -843,7 +843,7 @@ export default function StudentDashboard() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {editingProfile ? (
                       // Edit Profile Form
                       <div className="space-y-6">
@@ -853,7 +853,7 @@ export default function StudentDashboard() {
                             <input
                               type="text"
                               value={editedProfileData.name}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, name: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, name: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -862,7 +862,7 @@ export default function StudentDashboard() {
                             <input
                               type="email"
                               value={editedProfileData.email}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, email: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, email: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -871,7 +871,7 @@ export default function StudentDashboard() {
                             <input
                               type="text"
                               value={editedProfileData.studentId}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, studentId: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, studentId: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -880,7 +880,7 @@ export default function StudentDashboard() {
                             <input
                               type="text"
                               value={editedProfileData.department}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, department: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, department: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -889,7 +889,7 @@ export default function StudentDashboard() {
                             <input
                               type="text"
                               value={editedProfileData.year}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, year: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, year: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -898,7 +898,7 @@ export default function StudentDashboard() {
                             <input
                               type="text"
                               value={editedProfileData.phone}
-                              onChange={(e) => setEditedProfileData({...editedProfileData, phone: e.target.value})}
+                              onChange={(e) => setEditedProfileData({ ...editedProfileData, phone: e.target.value })}
                               className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
                             />
                           </div>
@@ -972,11 +972,11 @@ export default function StudentDashboard() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="premium-card p-6 rounded-xl">
                     <h3 className="text-subheader-md text-text-primary mb-4 font-medium">Security</h3>
                     <div className="space-y-4">
-                      <button 
+                      <button
                         onClick={() => setChangingPassword(true)}
                         className="w-full text-left premium-input px-4 py-3 rounded-lg text-body-md flex items-center justify-between hover:bg-accent-bronze/10 transition-colors"
                       >
@@ -986,7 +986,7 @@ export default function StudentDashboard() {
                         </div>
                         <Edit3 className="w-4 h-4 text-text-secondary" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => setFaceSettingsActive(true)}
                         className="w-full text-left premium-input px-4 py-3 rounded-lg text-body-md flex items-center justify-between hover:bg-accent-bronze/10 transition-colors"
                       >
@@ -999,7 +999,7 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Change Password Modal */}
                 {changingPassword && (
                   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
@@ -1016,7 +1016,7 @@ export default function StudentDashboard() {
                           <input
                             type={showCurrentPassword ? "text" : "password"}
                             value={passwordData.currentPassword}
-                            onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                             className="premium-input w-full px-4 py-3 rounded-lg text-body-md pr-12"
                           />
                           <button
@@ -1036,7 +1036,7 @@ export default function StudentDashboard() {
                           <input
                             type={showNewPassword ? "text" : "password"}
                             value={passwordData.newPassword}
-                            onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                             className="premium-input w-full px-4 py-3 rounded-lg text-body-md pr-12"
                           />
                           <button
@@ -1056,7 +1056,7 @@ export default function StudentDashboard() {
                           <input
                             type={showConfirmPassword ? "text" : "password"}
                             value={passwordData.confirmPassword}
-                            onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                             className="premium-input w-full px-4 py-3 rounded-lg text-body-md pr-12"
                           />
                           <button
@@ -1083,7 +1083,7 @@ export default function StudentDashboard() {
                                   });
                                   return;
                                 }
-                                
+
                                 if (!passwordData.newPassword) {
                                   setNotification({
                                     message: 'Please enter a new password!',
@@ -1091,7 +1091,7 @@ export default function StudentDashboard() {
                                   });
                                   return;
                                 }
-                                
+
                                 if (!passwordData.confirmPassword) {
                                   setNotification({
                                     message: 'Please confirm your new password!',
@@ -1099,7 +1099,7 @@ export default function StudentDashboard() {
                                   });
                                   return;
                                 }
-                                
+
                                 if (passwordData.newPassword !== passwordData.confirmPassword) {
                                   setNotification({
                                     message: 'New passwords do not match!',
@@ -1107,7 +1107,7 @@ export default function StudentDashboard() {
                                   });
                                   return;
                                 }
-                                
+
                                 if (passwordData.newPassword.length < 6) {
                                   setNotification({
                                     message: 'Password must be at least 6 characters long!',
@@ -1115,7 +1115,7 @@ export default function StudentDashboard() {
                                   });
                                   return;
                                 }
-                                
+
                                 // Change password
                                 await authAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
                                 setChangingPassword(false);
@@ -1164,7 +1164,7 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Face Recognition Settings Modal */}
                 {faceSettingsActive && (
                   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
@@ -1182,11 +1182,11 @@ export default function StudentDashboard() {
                             <p className="text-body-sm text-text-secondary">Require face verification for attendance</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
                               checked={faceSettings.requireFaceVerification}
-                              onChange={(e) => setFaceSettings({...faceSettings, requireFaceVerification: e.target.checked})}
+                              onChange={(e) => setFaceSettings({ ...faceSettings, requireFaceVerification: e.target.checked })}
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-bronze"></div>
                           </label>
@@ -1197,11 +1197,11 @@ export default function StudentDashboard() {
                             <p className="text-body-sm text-text-secondary">Allow attendance marking through authorized proxies</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
                               checked={faceSettings.allowProxyAttendance}
-                              onChange={(e) => setFaceSettings({...faceSettings, allowProxyAttendance: e.target.checked})}
+                              onChange={(e) => setFaceSettings({ ...faceSettings, allowProxyAttendance: e.target.checked })}
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-bronze"></div>
                           </label>
@@ -1253,7 +1253,7 @@ export default function StudentDashboard() {
                 className="max-w-3xl mx-auto"
               >
                 <h2 className="text-header-md text-text-primary mb-8 text-center font-serif">Settings</h2>
-                
+
                 <div className="space-y-6">
                   <div className="premium-card p-6 rounded-xl">
                     <h3 className="text-subheader-md text-text-primary mb-4 font-medium flex items-center gap-2">
@@ -1267,11 +1267,11 @@ export default function StudentDashboard() {
                           <p className="text-body-sm text-text-secondary">Get notified before classes start</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="sr-only peer" 
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
                             checked={settings.notifications}
-                            onChange={(e) => setSettings({...settings, notifications: e.target.checked})}
+                            onChange={(e) => setSettings({ ...settings, notifications: e.target.checked })}
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-bronze"></div>
                         </label>
@@ -1282,18 +1282,18 @@ export default function StudentDashboard() {
                           <p className="text-body-sm text-text-secondary">Receive updates about class changes</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="sr-only peer" 
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
                             checked={settings.notifications}
-                            onChange={(e) => setSettings({...settings, notifications: e.target.checked})}
+                            onChange={(e) => setSettings({ ...settings, notifications: e.target.checked })}
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-bronze"></div>
                         </label>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="premium-card p-6 rounded-xl">
                     <h3 className="text-subheader-md text-text-primary mb-4 font-medium flex items-center gap-2">
                       <Palette className="w-5 h-5" />
@@ -1309,7 +1309,7 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="premium-card p-6 rounded-xl">
                     <h3 className="text-subheader-md text-text-primary mb-4 font-medium flex items-center gap-2">
                       <Camera className="w-5 h-5" />
@@ -1322,22 +1322,22 @@ export default function StudentDashboard() {
                           <p className="text-body-sm text-text-secondary">Require face verification for attendance</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="sr-only peer" 
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
                             checked={settings.faceVerification}
-                            onChange={(e) => setSettings({...settings, faceVerification: e.target.checked})}
+                            onChange={(e) => setSettings({ ...settings, faceVerification: e.target.checked })}
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-bronze"></div>
                         </label>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="premium-card p-6 rounded-xl">
                     <h3 className="text-subheader-md text-text-primary mb-4 font-medium">Account</h3>
                     <div className="space-y-4">
-                      <button 
+                      <button
                         onClick={handleLogout}
                         className="w-full premium-button py-3 rounded-full text-label flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white"
                       >
