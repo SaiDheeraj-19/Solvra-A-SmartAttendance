@@ -587,8 +587,8 @@ export default function AdminPortal() {
                       <div>
                         <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Campus Latitude</label>
                         <input
-                          type="number"
-                          step="any"
+                          type="text"
+                          inputMode="decimal"
                           value={geofenceSettings.lat}
                           onChange={(e) => handleGeofenceChange('lat', e.target.value)}
                           className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
@@ -597,8 +597,8 @@ export default function AdminPortal() {
                       <div>
                         <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Campus Longitude</label>
                         <input
-                          type="number"
-                          step="any"
+                          type="text"
+                          inputMode="decimal"
                           value={geofenceSettings.lng}
                           onChange={(e) => handleGeofenceChange('lng', e.target.value)}
                           className="premium-input w-full px-4 py-3 rounded-lg text-body-md"
@@ -607,7 +607,8 @@ export default function AdminPortal() {
                       <div>
                         <label className="block text-label text-text-secondary mb-2 uppercase tracking-wider">Radius (meters)</label>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={geofenceSettings.radius}
                           onChange={(e) => handleGeofenceChange('radius', e.target.value)}
                           className="premium-input w-full px-4 py-3 rounded-lg text-body-md"

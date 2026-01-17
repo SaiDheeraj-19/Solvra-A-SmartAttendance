@@ -5,9 +5,9 @@ import { MapPin, Loader2, Save, RotateCcw } from 'lucide-react';
 
 export default function AdminGeofenceUpdater() {
   const [formData, setFormData] = useState({
-    lat: 15.797113, // Default fallback
-    lng: 78.077443,
-    radius: 1000
+    lat: '15.797113', // Default fallback
+    lng: '78.077443',
+    radius: '1000'
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -34,9 +34,9 @@ export default function AdminGeofenceUpdater() {
 
       if (data.success && data.geofence) {
         setFormData({
-          lat: data.geofence.center?.lat || 15.797113,
-          lng: data.geofence.center?.lng || 78.077443,
-          radius: data.geofence.radiusMeters || 1000
+          lat: String(data.geofence.center?.lat || 15.797113),
+          lng: String(data.geofence.center?.lng || 78.077443),
+          radius: String(data.geofence.radiusMeters || 1000)
         });
       }
     } catch (err) {
@@ -51,7 +51,7 @@ export default function AdminGeofenceUpdater() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0
+      [name]: value
     }));
   };
 
@@ -69,8 +69,8 @@ export default function AdminGeofenceUpdater() {
       (position) => {
         setFormData(prev => ({
           ...prev,
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
+          lat: String(position.coords.latitude),
+          lng: String(position.coords.longitude)
         }));
         setLoading(false);
         setMessage('Coordinates updated to your current location!');
@@ -97,6 +97,14 @@ export default function AdminGeofenceUpdater() {
         throw new Error('No authentication token found');
       }
 
+      const lat = parseFloat(formData.lat);
+      const lng = parseFloat(formData.lng);
+      const radius = parseFloat(formData.radius);
+
+      if (isNaN(lat) || isNaN(lng) || isNaN(radius)) {
+        throw new Error('Please enter valid numbers for latitude, longitude, and radius');
+      }
+
       const response = await fetch('/api/admin/geofence', {
         method: 'PUT',
         headers: {
@@ -105,10 +113,10 @@ export default function AdminGeofenceUpdater() {
         },
         body: JSON.stringify({
           center: {
-            lat: formData.lat,
-            lng: formData.lng
+            lat: lat,
+            lng: lng
           },
-          radiusMeters: formData.radius
+          radiusMeters: radius
         })
       });
 
@@ -179,9 +187,9 @@ export default function AdminGeofenceUpdater() {
               Latitude
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="lat"
-              step="any"
               value={formData.lat}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -194,9 +202,9 @@ export default function AdminGeofenceUpdater() {
               Longitude
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="lng"
-              step="any"
               value={formData.lng}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -211,11 +219,11 @@ export default function AdminGeofenceUpdater() {
           </label>
           <div className="relative">
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="radius"
               value={formData.radius}
               onChange={handleChange}
-              min="100"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               required
             />
